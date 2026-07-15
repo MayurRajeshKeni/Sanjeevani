@@ -1,11 +1,5 @@
 [
   {
-    "page_content": "langchain>=0.1.0\nlangchain-community>=0.0.10\nlangchain-core>=0.1.0\nlangchain-groq>=0.0.1\nlangchain-google-genai>=0.0.1\nlanggraph>=0.0.10\nsentence-transformers>=2.2.2\nfaiss-cpu>=1.7.4\nrank_bm25>=0.2.2\nstreamlit>=1.30.0\nragas>=0.1.0\npython-dotenv>=1.0.0\npydantic>=2.0.0\npypdf>=4.0.0",
-    "metadata": {
-      "source": "C:\\Users\\asus\\OneDrive\\Documents\\Projects\\Sanjeevani\\requirements.txt"
-    }
-  },
-  {
     "page_content": "# System Architecture & Flow",
     "metadata": {
       "source": "C:\\Users\\asus\\OneDrive\\Documents\\Projects\\Sanjeevani\\z_docs\\architectutre.md"
