@@ -1,5 +1,6 @@
 import os
 import json
+from dotenv import load_dotenv
 from src.ingestion.loaders import load_directory, load_document
 from src.ingestion.chunkers import chunk_documents
 from src.ingestion.markdown_graph_parser import MarkdownGraphParser
@@ -7,6 +8,10 @@ from src.retrieval.vector_engine import VectorRetrievalEngine
 from src.retrieval.sparse_engine import SparseRetrievalEngine
 from src.retrieval.graph_engine import GraphRetrievalEngine
 from src.retrieval.fusion import HybridRetriever
+from src.agent.graph import create_agent_graph
+
+# Load environment variables (such as API keys) from .env
+load_dotenv()
 
 def run_pipeline() -> None:
     # Determine base directory
@@ -17,7 +22,7 @@ def run_pipeline() -> None:
     
     print("\n--- Phase 1: Ingestion, Chunking & Graph Parsing ---")
     
-    # 1. Load markdown files from the workspace root (specifically z_docs/)
+    # 1. Load markdown files from the z_docs directory
     docs_dir = os.path.join(base_dir, "z_docs")
     print(f"Loading documents from: {docs_dir}")
     docs = load_directory(docs_dir)
@@ -50,7 +55,7 @@ def run_pipeline() -> None:
     print(f"Saved graph JSON to {graph_path}")
     print(f"Graph stats: {len(graph_data['nodes'])} nodes, {len(graph_data['edges'])} edges.")
     
-    print("\n--- Phase 2: Tri-Modal Retrieval & Reciprocal Rank Fusion (RRF) ---")
+    print("\n--- Phase 2 & 3: Tri-Modal Retrieval & LangGraph Orchestration ---")
     
     # Initialize the three retrieval engines
     vector_engine = VectorRetrievalEngine(chunks)
@@ -60,29 +65,45 @@ def run_pipeline() -> None:
     # Initialize the RRF Hybrid Retriever
     hybrid_retriever = HybridRetriever(vector_engine, sparse_engine, graph_engine)
     
-    # Run test queries to verify fusion ranking and breakdowns
+    # Compile the LangGraph agent graph
+    print("Compiling self-healing LangGraph agent...")
+    agent = create_agent_graph(hybrid_retriever)
+    print("Agent compiled successfully!")
+    
+    # Run test queries to verify agent workflow
     test_queries = [
         "What is the exact memory limitation of the local host machine?",
-        "Explain the Reciprocal Rank Fusion RRF mathematical formula.",
-        "What frontend framework is chosen and what is the color palette?"
+        "What is the capital of France?"  # Groundedness critique will fail, triggering query rewrite, loop retries, and fallback
     ]
     
     for query in test_queries:
         print(f"\n==================================================")
-        print(f"QUERY: '{query}'")
+        print(f"RUNNING AGENT FOR QUERY: '{query}'")
         print(f"==================================================")
         
-        retrieved_docs = hybrid_retriever.retrieve(query, top_k=3)
+        initial_state = {
+            "original_query": query,
+            "current_search_query": query,
+            "retrieved_chunks": [],
+            "draft_answer": "",
+            "critique_score": 0.0,
+            "critique_feedback": "",
+            "loop_count": 0
+        }
         
-        for idx, doc in enumerate(retrieved_docs):
-            source_file = os.path.basename(doc.metadata.get("source", "Unknown"))
-            rrf_score = doc.metadata.get("rrf_score", 0.0)
-            ranks = doc.metadata.get("rrf_ranks", {})
-            print(f"\n[HIT {idx+1}] Source: {source_file}")
-            print(f"RRF Score: {rrf_score:.6f}")
-            print(f"Rank Contributions -> Vector: {ranks.get('vector')}, Sparse: {ranks.get('sparse')}, Graph: {ranks.get('graph')}")
-            content_snippet = doc.page_content[:200].replace('\n', ' ')
-            print(f"Snippet: {content_snippet}...")
+        # Execute the compiled graph agent
+        final_state = agent.invoke(initial_state)
+        
+        print(f"\n--------------------------------------------------")
+        print(f"AGENT EXECUTION SUMMARY:")
+        print(f"--------------------------------------------------")
+        print(f"Original Query: {final_state['original_query']}")
+        print(f"Final Search Query: {final_state['current_search_query']}")
+        print(f"Groundedness Score: {final_state['critique_score']:.2f}")
+        print(f"Loop Count: {final_state['loop_count']}")
+        print(f"Retrieved Chunks Count: {len(final_state['retrieved_chunks'])}")
+        print(f"\nFINAL ANSWER:\n{final_state['draft_answer']}")
+        print(f"--------------------------------------------------")
 
 if __name__ == "__main__":
     run_pipeline()
