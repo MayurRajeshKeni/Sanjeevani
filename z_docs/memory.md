@@ -2,9 +2,9 @@
 *(Instructions for AI: Read this file at the start of every session. Update this file at the end of every session or when a major feature is complete. Do not change the structure, only update the values.)*
 
 ## Current Status
-* **Project Phase:** Phase 4 - CI/CD & UI Dashboard
-* **Current Active Task:** Create the `golden_dataset.json` following the PRD schema, write the automated evaluation script using `ragas`, and build the Streamlit UI dashboard visualizing retriever and agent states.
-* **Last Modified:** July 16, 2026
+* **Project Phase:** All Phases Complete (Phases 1-4)
+* **Current Active Task:** Benchmark evaluations fully operational and Streamlit UI dashboard running.
+* **Last Modified:** July 17, 2026
 
 ## Completed Features
 * Architectural Planning & Documentation Complete (Overview, PRD, Architecture, Rules, Phases, Design finalized).
@@ -17,6 +17,10 @@
   * Assembled cyclic healing loop transitions via LangGraph `StateGraph`.
   * Verified live query execution paths and state machine routing behavior under 3-pass loop limits.
   * Pushed Phase 3 code to GitHub.
+* Phase 4 Complete:
+  * Formulated golden benchmark dataset and set up Ragas automated evaluator (`run_eval.py`).
+  * Optimized embedding models to run offline (`local_files_only=True`) to bypass HF Hub latency and DNS failures.
+  * Built high-fidelity Streamlit UI dashboard (`app.py`) featuring interactive chatbot play, live self-healing LangGraph telemetry trace, 3-column metrics container (Latency, Token usage, RRF engine contribution bar chart), Ragas Benchmark cards/matrices, and a search-enabled Knowledge Graph concepts viewer.
 
 ## Known Bugs & Issues
 * *None.*
@@ -24,4 +28,4 @@
 ## Context Notes for Next Session
 * System Python 3.11 environment in AppData must be used to run commands (`py -3.11 ...`) to bypass local WDAC blocks.
 * Environment keys for Groq and Gemini are loaded successfully from `.env` in the workspace root.
-* Ready to proceed with Phase 4: CI/CD validation (Ragas) and the Streamlit UI dashboard.
+* Streamlit server running locally on port 8501.

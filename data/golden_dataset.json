@@ -1,0 +1,38 @@
+[
+  {
+    "question": "What is the exact memory limitation of the local host machine?",
+    "ground_truth": "The local host machine has a hard cap of 16GB shared RAM.",
+    "expected_context": [
+      "The host machine has a hard cap of 16GB shared RAM. DO NOT attempt to load large LLMs (e.g., Llama 7B, Mistral) locally via Ollama or HuggingFace."
+    ]
+  },
+  {
+    "question": "What is the Reciprocal Rank Fusion RRF mathematical formula used in the retrieval engine?",
+    "ground_truth": "RRF(d) = sum_{r in R} 1 / (k + rank_r(d)) where k is a smoothing constant defaulting to 60.",
+    "expected_context": [
+      "RRF(d) = \\sum_{r \\in R} \\frac{1}{k + rank_r(d)}"
+    ]
+  },
+  {
+    "question": "What frontend framework is chosen for the user interface dashboard and what color is the default theme?",
+    "ground_truth": "Streamlit is the chosen frontend framework, and the theme defaults to Dark Mode with background color #0E1117.",
+    "expected_context": [
+      "Frontend Framework * Primary Tool: Streamlit (streamlit). Chosen for rapid data visualization and seamless Python integration.",
+      "Thematic Guidelines * Theme: Dark Mode default (easier on the eyes for developer tools). * Color Palette: * Background: #0E1117"
+    ]
+  },
+  {
+    "question": "What local embedding model is used for dense semantic retrieval?",
+    "ground_truth": "The local embedding model is all-MiniLM-L6-v2 which is about 90MB.",
+    "expected_context": [
+      "Extremely small embedding models (`all-MiniLM-L6-v2` at ~90MB)."
+    ]
+  },
+  {
+    "question": "What are the four native evaluation metrics that the pipeline must measure?",
+    "ground_truth": "The four native Ragas evaluation metrics are faithfulness, answer_relevance, context_precision, and context_recall.",
+    "expected_context": [
+      "The Ragas/TruLens evaluation node must explicitly measure and log these four native metrics: 1. faithfulness 2. answer_relevance 3. context_precision 4. context_recall"
+    ]
+  }
+]

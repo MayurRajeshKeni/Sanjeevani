@@ -16,6 +16,7 @@ class VectorRetrievalEngine:
         # Load the lightweight MiniLM model (approx 90MB RAM footprint)
         self.embeddings = HuggingFaceEmbeddings(
             model_name="all-MiniLM-L6-v2",
+            model_kwargs={"local_files_only": True},
             encode_kwargs={"normalize_embeddings": True}  # Normalizing yields cosine similarity
         )
         

@@ -27,6 +27,7 @@ class GraphRetrievalEngine:
         print("Loading local embeddings model for Graph Node matching...")
         self.embeddings = HuggingFaceEmbeddings(
             model_name="all-MiniLM-L6-v2",
+            model_kwargs={"local_files_only": True},
             encode_kwargs={"normalize_embeddings": True}
         )
         
