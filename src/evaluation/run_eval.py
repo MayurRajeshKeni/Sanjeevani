@@ -1,14 +1,19 @@
 import os
 import json
 import sys
+# Add project root to sys.path for robust module importing
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
 import pandas as pd
 # pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
 from datasets import Dataset
 from langchain_groq import ChatGroq
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from ragas.metrics import faithfulness, answer_relevancy, context_precision, context_recall
 from ragas import evaluate
+from ragas.run_config import RunConfig
 
 # Import ingestion, retrieval, and agent compilation
 from src.ingestion.loaders import load_directory
@@ -115,9 +120,9 @@ def run_evaluations() -> None:
         "ground_truth": ground_truths
     })
     
-    # 6. Initialize Ragas evaluation models
+    # 6. Initialize Ragas evaluation models using Gemini 2.0 Flash to avoid Groq rate limit throttling
     print("\nInitializing Ragas evaluation models...")
-    llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0.0)
+    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.0)
     embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2", model_kwargs={"local_files_only": True})
     
     # Explicitly map models onto metrics to bypass default OpenAI lookups
@@ -127,14 +132,16 @@ def run_evaluations() -> None:
     context_precision.llm = llm
     context_recall.llm = llm
     
-    # 7. Run evaluation
+    # 7. Run evaluation with run_config to prevent hitting Google free-tier rate limits
     print("\nCalculating metrics (faithfulness, answer_relevancy, context_precision, context_recall)...")
     eval_metrics = [faithfulness, answer_relevancy, context_precision, context_recall]
+    run_config = RunConfig(max_workers=1)
     eval_result = evaluate(
         dataset=eval_dataset,
         metrics=eval_metrics,
         llm=llm,
-        embeddings=embeddings
+        embeddings=embeddings,
+        run_config=run_config
     )
     
     # Convert results using pandas to avoid version-dependent dict structure crashes

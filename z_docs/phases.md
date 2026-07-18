@@ -24,4 +24,11 @@
 * Create the `golden_dataset.json` following the strict schema (question, ground_truth, expected_context).
 * **[NEW]** Write the automated evaluation script using the `ragas` library to explicitly measure: `faithfulness`, `answer_relevance`, `context_precision`, and `context_recall`.
 * Build a Streamlit UI to visualize the chat, the internal LangGraph "thinking" loops, end-to-end latency, and RRF score contributions.
+* **[NEW Refinements]**:
+  * Fixed state serialization and stream accumulation bugs in Streamlit to resolve empty RRF tables and flat 33.33% metrics.
+  * Corrected telemetry trace logger outputs to avoid duplicate critique feedback.
+  * Added dynamic document uploading and automatic RAG database re-indexing to ingest custom files on the fly.
+  * Built an interactive Golden Dataset question editor (`st.data_editor`) to CRUD benchmark questions inside the app.
+  * Enforced min/max zoom limits (0.5 to 2.0) and pan boundary constraints (800px limit) in Vis.js to keep graph containment.
+  * Upgraded Ragas LLM to `gemini-2.0-flash` with sequential `RunConfig(max_workers=1)` and built exponential backoff retries on rate limit (429) warnings to fully stabilize benchmarking runs.
 * *Milestone:* Fully operational graphical benchmarking app that blocks pull requests if metrics regress.

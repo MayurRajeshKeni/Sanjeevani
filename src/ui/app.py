@@ -130,10 +130,36 @@ st.sidebar.markdown("- **Critic Node:** Gemini 1.5 (AI Studio API)")
 st.sidebar.markdown("---")
 with st.sidebar.expander("Terminology Guide"):
     st.markdown("""
-    * **LangGraph**: A cyclical AI workflow. The AI can pause, look at its own work, and loop back to try again if it makes a mistake.
-    * **Critic Node**: The internal AI proofreader. It intercepts the draft and checks it against the retrieved documents to prevent hallucinations.
-    * **Self-Healing Loop**: The automatic correction cycle. If the Critic finds a mistake, it rewrites the query and triggers a re-retrieval.
+    * **LangGraph**: A cyclic orchestration framework for building stateful, multi-actor applications with LLMs, enabling self-healing retry loops.
+    * **Critic Node**: The internal evaluation agent that checks the generated draft answer against the retrieved context using Gemini 1.5 Flash to ensure factuality.
+    * **Self-Healing Loop**: The autonomous loop where the Critic Node rewrites the search query and re-triggers retrieval if groundedness score is low.
+    * **RRF (Reciprocal Rank Fusion)**: An algorithm that mathematically combines and re-ranks document rankings from multiple independent search strategies.
+    * **Sparse BM25**: A keyword-based lexical search engine that ranks chunks based on exact word match occurrences and frequencies.
+    * **Dense Vector**: A semantic search engine that uses dense embeddings (`all-MiniLM-L6-v2`) to retrieve chunks matching the conceptual meaning of the query.
+    * **JSON Knowledge Graph**: A structured hierarchy mapping headers (nodes) and their relationships (edges) to match concepts with parent-child context.
+    * **Groundedness (Faithfulness)**: Metric verifying if the generated answer is derived *solely* from retrieved context without outside hallucinations.
+    * **Answer Relevancy**: Metric verifying if the answer directly and cleanly addresses the user's initial question.
+    * **Context Precision**: Metric measuring if the retrieval engines successfully ranked the most relevant document chunks at the top.
+    * **Context Recall**: Metric measuring if the retrieval engines fetched all necessary information required to answer the ground truth.
+    * **Latency**: The time in milliseconds taken by the entire LangGraph agent flow (including hybrid search and critique checks).
+    * **Golden Dataset**: A benchmark test set of curated questions, ground truth answers, and context requirements used to evaluate accuracy.
     """)
+
+# Document Ingestion Panel
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 📥 Ingest New Document")
+uploaded_file = st.sidebar.file_uploader("Upload a text or markdown file (.md, .txt)", type=["md", "txt"])
+if uploaded_file is not None:
+    # Save file to docs_dir
+    save_path = os.path.join(docs_dir, uploaded_file.name)
+    with open(save_path, "wb") as f:
+        f.write(uploaded_file.getbuffer())
+    st.sidebar.success(f"Saved: {uploaded_file.name}")
+    
+    # Reload engine cache
+    if st.sidebar.button("Re-index & Reload Engines"):
+        st.cache_resource.clear()
+        st.rerun()
 
 # ================= MAIN CANVAS =================
 st.markdown("<div class='main-header'>Project Sanjeevani</div>", unsafe_allow_html=True)
@@ -214,22 +240,19 @@ with tab_chat:
             start_time = time.time()
             final_state = None
             
+            current_state = dict(initial_state)
             with st.spinner("LangGraph running state machine loops..."):
                 # Stream events step-by-step
-                for event in agent.stream(initial_state):
+                for event in agent.stream(current_state):
                     for node_name, state_update in event.items():
+                        current_state.update(state_update)
                         if node_name == "retrieve":
                             trace_logs.append(f"`[RETRIEVE]` Fetched {len(state_update.get('retrieved_chunks', []))} fused document chunks.")
                         elif node_name == "generate":
                             trace_logs.append(f"`[GENERATE]` Drafted response answer using Groq Llama 3.1.")
                         elif node_name == "critic":
                             score = state_update.get("critique_score", 0.0)
-                            feedback = state_update.get("critique_feedback", "")
-                            if "429" in feedback or "resource_exhausted" in feedback.lower() or "quota" in feedback.lower():
-                                display_feedback = "[RESOURCE LIMIT] API rate limits exceeded. State machine routing query for query optimization and healing."
-                            else:
-                                display_feedback = feedback
-                            trace_logs.append(f"`[CRITIQUE]` Groundedness score: **{score:.2f}**<br><small>Feedback: {display_feedback}</small>")
+                            trace_logs.append(f"`[CRITIQUE]` Groundedness score: **{score:.2f}**")
                         elif node_name == "rewrite":
                             rewritten = state_update.get("current_search_query", "")
                             trace_logs.append(f"`[REWRITE]` Groundedness check failed. Query reformulated to: *'{rewritten}'*")
@@ -238,11 +261,11 @@ with tab_chat:
                             
                         # Update progress live inside UI placeholder
                         with thinking_placeholder.expander("[EXECUTION FLOW & SELF-HEALING TELEMETRY] (Live Trace)", expanded=True):
-                            st.markdown(f"**Current State Loops:** `{state_update.get('loop_count', 0)}`")
+                            st.markdown(f"**Current State Loops:** `{current_state.get('loop_count', 0)}`")
                             for log in trace_logs:
                                 st.markdown(log, unsafe_allow_html=True)
                                 
-                    final_state = initial_state | state_update
+            final_state = current_state
             
             latency = time.time() - start_time
             answer = final_state.get("draft_answer", "Information not found.")
@@ -414,6 +437,54 @@ with tab_bench:
     else:
         st.info("No evaluation scores found. Run the initial Ragas evaluation benchmarking suite.")
 
+    # Golden Dataset Editor Panel
+    st.markdown("---")
+    st.markdown("### 📝 Manage Golden Dataset Questions")
+    st.markdown("Double-click any cell to edit details. Select rows and press 'Delete' on your keyboard to remove a question. To add a new question, scroll to the bottom row and type.")
+    
+    golden_path = os.path.join(base_dir, "data", "golden_dataset.json")
+    if os.path.exists(golden_path):
+        with open(golden_path, "r", encoding="utf-8") as f:
+            golden_data = json.load(f)
+        
+        # Format dataset for st.data_editor
+        golden_rows = []
+        for item in golden_data:
+            golden_rows.append({
+                "Question": item.get("question", ""),
+                "Ground Truth": item.get("ground_truth", ""),
+                "Expected Context": "\n".join(item.get("expected_context", []))
+            })
+        df_golden = pd.DataFrame(golden_rows)
+        
+        edited_df = st.data_editor(
+            df_golden,
+            num_rows="dynamic",
+            use_container_width=True,
+            column_config={
+                "Question": st.column_config.TextColumn(width="medium", required=True),
+                "Ground Truth": st.column_config.TextColumn(width="medium", required=True),
+                "Expected Context": st.column_config.TextColumn(width="large", help="Enter context snippets separated by newlines")
+            }
+        )
+        
+        if st.button("Save Dataset Changes"):
+            new_golden = []
+            for _, r in edited_df.iterrows():
+                q = r["Question"]
+                gt = r["Ground Truth"]
+                ec = [line.strip() for line in str(r["Expected Context"]).split("\n") if line.strip()]
+                if pd.notna(q) and pd.notna(gt) and str(q).strip() and str(gt).strip():
+                    new_golden.append({
+                        "question": str(q).strip(),
+                        "ground_truth": str(gt).strip(),
+                        "expected_context": ec
+                    })
+            with open(golden_path, "w", encoding="utf-8") as f:
+                json.dump(new_golden, f, indent=2, ensure_ascii=False)
+            st.success("Golden dataset successfully updated!")
+            st.rerun()
+
 # ================= TAB 3: KNOWLEDGE GRAPH =================
 with tab_graph:
     st.markdown("### Parsed Knowledge Graph Viewer")
@@ -492,6 +563,40 @@ with tab_graph:
           }}
         }};
         var network = new vis.Network(container, data, options);
+        
+        // Enforce zoom and translation pan constraints to prevent getting lost
+        var MIN_ZOOM = 0.5;
+        var MAX_ZOOM = 2.0;
+        var PAN_LIMIT = 800; // maximum offset in pixels from center (0,0)
+        
+        network.on("zoom", function(params) {{
+          if (params.scale < MIN_ZOOM) {{
+            network.moveTo({{ scale: MIN_ZOOM }});
+          }} else if (params.scale > MAX_ZOOM) {{
+            network.moveTo({{ scale: MAX_ZOOM }});
+          }}
+        }});
+        
+        network.on("dragEnd", function() {{
+          var pos = network.getViewPosition();
+          var newX = pos.x;
+          var newY = pos.y;
+          var reset = false;
+          
+          if (pos.x > PAN_LIMIT) {{ newX = PAN_LIMIT; reset = true; }}
+          else if (pos.x < -PAN_LIMIT) {{ newX = -PAN_LIMIT; reset = true; }}
+          
+          if (pos.y > PAN_LIMIT) {{ newY = PAN_LIMIT; reset = true; }}
+          else if (pos.y < -PAN_LIMIT) {{ newY = -PAN_LIMIT; reset = true; }}
+          
+          if (reset) {{
+            network.moveTo({{
+              position: {{ x: newX, y: newY }},
+              rescale: false
+            }});
+          }}
+        }});
+
         network.once("stabilizationIterationsDone", function() {{
           network.setOptions({{ physics: false }});
         }});

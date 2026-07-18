@@ -35,7 +35,7 @@ class AgentNodes:
         
         # Initialize direct Google GenAI client to bypass LangChain gRPC hanging/connection issues
         self.genai_client = genai.Client()
-        self.gemini_model = "gemini-flash-latest"
+        self.gemini_model = "gemini-2.0-flash"
         
     def retrieve_node(self, state: RagAgentState) -> Dict[str, Any]:
         """Retrieves and packages document chunks from the tri-modal hybrid search engine.
@@ -133,13 +133,33 @@ class AgentNodes:
             f"=== DRAFT ANSWER ===\n{draft}"
         )
         
+        import time
+        max_retries = 3
+        backoff = 2
+        raw_content = ""
+        for attempt in range(max_retries):
+            try:
+                response = self.genai_client.models.generate_content(
+                    model=self.gemini_model,
+                    contents=prompt
+                )
+                raw_content = response.text.strip()
+                break
+            except Exception as e:
+                if "429" in str(e) and attempt < max_retries - 1:
+                    sleep_time = backoff ** (attempt + 1)
+                    print(f"[Node: Critic] Rate limited (429). Retrying in {sleep_time}s...")
+                    time.sleep(sleep_time)
+                else:
+                    print(f"[Node: Critic] Warning - Failed to query critique model: {e}. Defaulting to score 0.0.")
+                    score = 0.0
+                    feedback = f"Critique engine failure: {str(e)}"
+                    return {
+                        "critique_score": score,
+                        "critique_feedback": feedback
+                    }
+                    
         try:
-            response = self.genai_client.models.generate_content(
-                model=self.gemini_model,
-                contents=prompt
-            )
-            raw_content = response.text.strip()
-            
             # Clean markdown code blocks if the model generated them
             json_match = re.search(r"\{.*\}", raw_content, re.DOTALL)
             if json_match:
@@ -190,15 +210,26 @@ class AgentNodes:
             f"Critique Feedback: {feedback}"
         )
         
-        try:
-            response = self.genai_client.models.generate_content(
-                model=self.gemini_model,
-                contents=prompt
-            )
-            new_query = response.text.strip().replace('"', '').replace("'", "")
-        except Exception as e:
-            print(f"[Node: Rewrite] Warning - Query rewrite failed: {e}. Using original query.")
-            new_query = original_query
+        import time
+        max_retries = 3
+        backoff = 2
+        new_query = original_query
+        for attempt in range(max_retries):
+            try:
+                response = self.genai_client.models.generate_content(
+                    model=self.gemini_model,
+                    contents=prompt
+                )
+                new_query = response.text.strip().replace('"', '').replace("'", "")
+                break
+            except Exception as e:
+                if "429" in str(e) and attempt < max_retries - 1:
+                    sleep_time = backoff ** (attempt + 1)
+                    print(f"[Node: Rewrite] Rate limited (429). Retrying in {sleep_time}s...")
+                    time.sleep(sleep_time)
+                else:
+                    print(f"[Node: Rewrite] Warning - Query rewrite failed: {e}. Using original query.")
+                    new_query = original_query
             
         print(f"[Node: Rewrite] Optimized search query generated: '{new_query}'")
         
