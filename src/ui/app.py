@@ -501,138 +501,227 @@ with tab_bench:
             st.rerun()
 
 # ================= TAB 3: KNOWLEDGE GRAPH =================
+# ================= TAB 3: KNOWLEDGE GRAPH =================
 with tab_graph:
     st.markdown("### Parsed Knowledge Graph Viewer")
     st.markdown("Interactive structure showing concepts, levels, and associated details.")
     
-    # Filter concepts input
-    search_q = st.text_input("Filter concepts by name:", "")
-    
     nodes_list = graph_data.get("nodes", []) if isinstance(graph_data, dict) else []
     edges_list = graph_data.get("edges", []) if isinstance(graph_data, dict) else []
 
-    # 1. Interactive Vis.js Network Graph Component
-    st.markdown("#### Interactive Topology Visualization")
+    # Get list of unique files/topics
+    unique_files = sorted(list({os.path.basename(n.get("source_file", "")) for n in nodes_list if n.get("source_file")}))
     
-    vis_nodes = []
-    for node in nodes_list:
-        vis_nodes.append({
-            "id": node["id"],
-            "label": node["title"][:25] + "..." if len(node["title"]) > 25 else node["title"],
-            "title": node["content"][:200] + "..." if node.get("content") else ""
-        })
+    # Helper to generate the HTML Vis.js content
+    def generate_vis_html(nodes, edges, container_id="network", height=400):
+        vis_nodes = []
+        for n in nodes:
+            # Color coding nodes based on heading level to look less cluttered
+            level = n.get("level", 1)
+            bg_color = '#1E293B' if level > 1 else '#0B132B'
+            border_color = '#00FFAA' if level == 1 else '#00F0FF'
+            vis_nodes.append({
+                "id": n["id"],
+                "label": n["title"][:25] + "..." if len(n["title"]) > 25 else n["title"],
+                "title": f"<b>{n['title']}</b><br/><br/>" + (n.get("content", "")[:300] + "..." if n.get("content") else "No associated text content."),
+                "color": {
+                    "background": bg_color,
+                    "border": border_color,
+                    "highlight": { "background": '#00FFAA', "border": '#00FFAA' }
+                }
+            })
+            
+        vis_edges = []
+        for e in edges:
+            vis_edges.append({
+                "from": e["source"],
+                "to": e["target"]
+            })
+            
+        nodes_json = json.dumps(vis_nodes)
+        edges_json = json.dumps(vis_edges)
         
-    vis_edges = []
-    for edge in edges_list:
-        vis_edges.append({
-            "from": edge["source"],
-            "to": edge["target"]
-        })
-        
-    nodes_json = json.dumps(vis_nodes)
-    edges_json = json.dumps(vis_edges)
-    
-    html_code = f"""
-    <html>
-    <head>
-      <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
-      <style type="text/css">
-        #network {{
-          width: 100%;
-          height: 400px;
-          background-color: #1A1C23;
-          border: 1px solid #334155;
-          border-radius: 6px;
-        }}
-      </style>
-    </head>
-    <body>
-      <div id="network"></div>
-      <script type="text/javascript">
-        var nodes = new vis.DataSet({nodes_json});
-        var edges = new vis.DataSet({edges_json});
-        var container = document.getElementById('network');
-        var data = {{ nodes: nodes, edges: edges }};
-        var options = {{
-          nodes: {{
-            shape: 'box',
-            margin: 10,
-            color: {{
-              background: '#1E293B',
-              border: '#00F0FF',
-              highlight: {{ background: '#00F0FF', border: '#00F0FF' }}
-            }},
-            font: {{ color: '#F8FAFC', face: 'Inter, sans-serif', size: 12 }}
-          }},
-          edges: {{
-            color: {{ color: '#475569', highlight: '#00F0FF' }},
-            arrows: 'to',
-            smooth: {{ type: 'continuous' }}
-          }},
-          physics: {{
-            stabilization: {{
-              enabled: true,
-              iterations: 150
-            }},
-            barnesHut: {{ gravitationalConstant: -1200, centralGravity: 0.3, springLength: 95 }}
-          }}
-        }};
-        var network = new vis.Network(container, data, options);
-        
-        // Enforce zoom and translation pan constraints to prevent getting lost
-        var MIN_ZOOM = 0.5;
-        var MAX_ZOOM = 2.0;
-        var PAN_LIMIT = 800; // maximum offset in pixels from center (0,0)
-        
-        network.on("zoom", function(params) {{
-          if (params.scale < MIN_ZOOM) {{
-            network.moveTo({{ scale: MIN_ZOOM }});
-          }} else if (params.scale > MAX_ZOOM) {{
-            network.moveTo({{ scale: MAX_ZOOM }});
-          }}
-        }});
-        
-        network.on("dragEnd", function() {{
-          var pos = network.getViewPosition();
-          var newX = pos.x;
-          var newY = pos.y;
-          var reset = false;
-          
-          if (pos.x > PAN_LIMIT) {{ newX = PAN_LIMIT; reset = true; }}
-          else if (pos.x < -PAN_LIMIT) {{ newX = -PAN_LIMIT; reset = true; }}
-          
-          if (pos.y > PAN_LIMIT) {{ newY = PAN_LIMIT; reset = true; }}
-          else if (pos.y < -PAN_LIMIT) {{ newY = -PAN_LIMIT; reset = true; }}
-          
-          if (reset) {{
-            network.moveTo({{
-              position: {{ x: newX, y: newY }},
-              rescale: false
+        return f"""
+        <html>
+        <head>
+          <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+          <style type="text/css">
+            #{container_id} {{
+              width: 100%;
+              height: {height}px;
+              background-color: #0E1117;
+              border: 1px solid #334155;
+              border-radius: 6px;
+            }}
+            /* Custom vis tooltip styling override */
+            div.vis-tooltip {{
+              background-color: #1E293B !important;
+              color: #F8FAFC !important;
+              border: 1px solid #475569 !important;
+              border-radius: 4px !important;
+              font-family: 'Inter', sans-serif !important;
+              padding: 8px !important;
+              font-size: 11px !important;
+              max-width: 280px !important;
+            }}
+          </style>
+        </head>
+        <body>
+          <div id="{container_id}"></div>
+          <script type="text/javascript">
+            var nodes = new vis.DataSet({nodes_json});
+            var edges = new vis.DataSet({edges_json});
+            var container = document.getElementById('{container_id}');
+            var data = {{ nodes: nodes, edges: edges }};
+            var options = {{
+              nodes: {{
+                shape: 'box',
+                margin: 10,
+                font: {{ color: '#F8FAFC', face: 'Inter, sans-serif', size: 11 }}
+              }},
+              edges: {{
+                color: {{ color: '#475569', highlight: '#00FFAA' }},
+                arrows: 'to',
+                smooth: {{ type: 'continuous' }}
+              }},
+              physics: {{
+                stabilization: {{
+                  enabled: true,
+                  iterations: 80
+                }},
+                barnesHut: {{ gravitationalConstant: -1000, centralGravity: 0.3, springLength: 90 }}
+              }}
+            }};
+            var network = new vis.Network(container, data, options);
+            
+            // Enforce zoom and translation pan constraints
+            var MIN_ZOOM = 0.5;
+            var MAX_ZOOM = 2.0;
+            var PAN_LIMIT = 800;
+            
+            network.on("zoom", function(params) {{
+              if (params.scale < MIN_ZOOM) {{
+                network.moveTo({{ scale: MIN_ZOOM }});
+              }} else if (params.scale > MAX_ZOOM) {{
+                network.moveTo({{ scale: MAX_ZOOM }});
+              }}
             }});
-          }}
-        }});
+            
+            network.on("dragEnd", function() {{
+              var pos = network.getViewPosition();
+              var newX = pos.x;
+              var newY = pos.y;
+              var reset = false;
+              
+              if (pos.x > PAN_LIMIT) {{ newX = PAN_LIMIT; reset = true; }}
+              else if (pos.x < -PAN_LIMIT) {{ newX = -PAN_LIMIT; reset = true; }}
+              
+              if (pos.y > PAN_LIMIT) {{ newY = PAN_LIMIT; reset = true; }}
+              else if (pos.y < -PAN_LIMIT) {{ newY = -PAN_LIMIT; reset = true; }}
+              
+              if (reset) {{
+                network.moveTo({{
+                  position: {{ x: newX, y: newY }},
+                  rescale: false
+                }});
+              }}
+            }});
 
-        network.once("stabilizationIterationsDone", function() {{
-          network.setOptions({{ physics: false }});
-        }});
-      </script>
-    </body>
-    </html>
-    """
-    components.html(html_code, height=420)
+            network.once("stabilizationIterationsDone", function() {{
+              network.setOptions({{ physics: false }});
+            }});
+          </script>
+        </body>
+        </html>
+        """
+
+    # Layout modes selectors
+    st.markdown("#### Layout Settings")
+    layout_mode = st.radio("Topology Layout View Mode:", ["Unified Topology View", "Compare 2 Disjoint Topics Side-by-Side"], horizontal=True)
+    
+    # Filter concepts input
+    search_q = st.text_input("Filter concepts by name or content globally:", "")
+
+    st.markdown("---")
+
+    if layout_mode == "Unified Topology View":
+        # Multiselect for documents
+        selected_topics = st.multiselect("Select Topics/Documents to render:", unique_files, default=unique_files)
+        
+        # Filter nodes based on selected files
+        filtered_nodes = [n for n in nodes_list if os.path.basename(n.get("source_file", "")) in selected_topics]
+        
+        # Apply name/content search if specified
+        if search_q:
+            filtered_nodes = [n for n in filtered_nodes if search_q.lower() in n.get("title", "").lower() or search_q.lower() in n.get("content", "").lower()]
+            
+        filtered_ids = {n["id"] for n in filtered_nodes}
+        filtered_edges = [e for e in edges_list if e["source"] in filtered_ids and e["target"] in filtered_ids]
+        
+        st.markdown(f"**Unified View**: displaying **{len(filtered_nodes)}** nodes and **{len(filtered_edges)}** edges.")
+        if filtered_nodes:
+            html = generate_vis_html(filtered_nodes, filtered_edges, "network_unified", height=450)
+            components.html(html, height=470)
+        else:
+            st.warning("No nodes match the selected filters.")
+            
+    else:
+        # Render side-by-side columns
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("##### Topic Graph A (Left)")
+            left_topic = st.selectbox("Select Left Topic:", unique_files, index=0)
+            
+            # Filter Left Topic
+            left_nodes = [n for n in nodes_list if os.path.basename(n.get("source_file", "")) == left_topic]
+            if search_q:
+                left_nodes = [n for n in left_nodes if search_q.lower() in n.get("title", "").lower() or search_q.lower() in n.get("content", "").lower()]
+            left_ids = {n["id"] for n in left_nodes}
+            left_edges = [e for e in edges_list if e["source"] in left_ids and e["target"] in left_ids]
+            
+            st.markdown(f"Showing **{len(left_nodes)}** nodes and **{len(left_edges)}** edges.")
+            if left_nodes:
+                html_left = generate_vis_html(left_nodes, left_edges, "network_left", height=380)
+                components.html(html_left, height=400)
+            else:
+                st.warning("No left nodes matched.")
+                
+        with col2:
+            st.markdown("##### Topic Graph B (Right)")
+            # Default to second file if multiple exist
+            right_idx = min(1, len(unique_files) - 1)
+            right_topic = st.selectbox("Select Right Topic:", unique_files, index=right_idx)
+            
+            # Filter Right Topic
+            right_nodes = [n for n in nodes_list if os.path.basename(n.get("source_file", "")) == right_topic]
+            if search_q:
+                right_nodes = [n for n in right_nodes if search_q.lower() in n.get("title", "").lower() or search_q.lower() in n.get("content", "").lower()]
+            right_ids = {n["id"] for n in right_nodes}
+            right_edges = [e for e in edges_list if e["source"] in right_ids and e["target"] in right_ids]
+            
+            st.markdown(f"Showing **{len(right_nodes)}** nodes and **{len(right_edges)}** edges.")
+            if right_nodes:
+                html_right = generate_vis_html(right_nodes, right_edges, "network_right", height=380)
+                components.html(html_right, height=400)
+            else:
+                st.warning("No right nodes matched.")
+
+    st.markdown("---")
 
     # 2. Tabular Concepts Data
     st.markdown("#### Tabular Concept Inventory")
     graph_rows = []
     for concept in nodes_list:
         title = concept.get("title", "")
-        if search_q.lower() in title.lower():
+        content = concept.get("content", "")
+        if not search_q or search_q.lower() in title.lower() or search_q.lower() in content.lower():
             graph_rows.append({
                 "Concept ID": concept.get("id", ""),
                 "Title": title,
                 "Heading Level": concept.get("level", ""),
                 "Source File": os.path.basename(concept.get("source_file", "")) if concept.get("source_file") else "",
-                "Associated Content": concept.get("content", "")[:300] + "..." if concept.get("content") else ""
+                "Associated Content": content[:300] + "..." if content else ""
             })
             
     st.dataframe(pd.DataFrame(graph_rows), use_container_width=True)
