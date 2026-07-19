@@ -102,7 +102,7 @@ class AgentNodes:
         return {"draft_answer": draft}
         
     def critic_node(self, state: RagAgentState) -> Dict[str, Any]:
-        """Evaluates draft groundedness and checks for hallucinations using Gemini 1.5 Flash.
+        """Evaluates draft groundedness and checks for hallucinations using Gemini 2.0 Flash.
         
         Args:
             state: The current LangGraph agent state.
@@ -110,7 +110,7 @@ class AgentNodes:
         Returns:
             Dict containing the critique_score and critique_feedback updates.
         """
-        print("\n[Node: Critic] Evaluating draft groundedness using Gemini 1.5 Flash...")
+        print("\n[Node: Critic] Evaluating draft groundedness using Gemini 2.0 Flash...")
         draft = state["draft_answer"]
         retrieved_chunks = state.get("retrieved_chunks", [])
         

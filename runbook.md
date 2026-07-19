@@ -48,7 +48,7 @@ GOOGLE_API_KEY=your_gemini_api_key_here
 ```
 
 * **GROQ_API_KEY**: Used for the answer generator node running `llama-3.1-8b-instant`.
-* **GOOGLE_API_KEY**: Used for the hallucination/groundedness check and query rewriting running `gemini-1.5-flash`.
+* **GOOGLE_API_KEY**: Used for the hallucination/groundedness check and query rewriting running `gemini-2.0-flash`.
 
 ---
 

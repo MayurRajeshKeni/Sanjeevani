@@ -139,14 +139,14 @@ st.sidebar.markdown(f"- **Concept Graph size:** {len(graph_data.get('nodes', [])
 # Active APIs Toggle Review
 st.sidebar.markdown("### API Deployments")
 st.sidebar.markdown("- **Generator:** Llama 3.1 (Groq API)")
-st.sidebar.markdown("- **Critic Node:** Gemini 1.5 (AI Studio API)")
+st.sidebar.markdown("- **Critic Node:** Gemini 2.0 (AI Studio API)")
 
 # Terminology Guide
 st.sidebar.markdown("---")
 with st.sidebar.expander("Terminology Guide"):
     st.markdown("""
     * **LangGraph**: A cyclic orchestration framework for building stateful, multi-actor applications with LLMs, enabling self-healing retry loops.
-    * **Critic Node**: The internal evaluation agent that checks the generated draft answer against the retrieved context using Gemini 1.5 Flash to ensure factuality.
+    * **Critic Node**: The internal evaluation agent that checks the generated draft answer against the retrieved context using Gemini 2.0 Flash to ensure factuality.
     * **Self-Healing Loop**: The autonomous loop where the Critic Node rewrites the search query and re-triggers retrieval if groundedness score is low.
     * **RRF (Reciprocal Rank Fusion)**: An algorithm that mathematically combines and re-ranks document rankings from multiple independent search strategies.
     * **Sparse BM25**: A keyword-based lexical search engine that ranks chunks based on exact word match occurrences and frequencies.
