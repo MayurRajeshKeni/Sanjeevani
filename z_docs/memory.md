@@ -28,7 +28,7 @@
   * Added dynamic file upload ingestion into `z_docs` and an in-app interactive Golden Dataset editor.
 
 ## Known Bugs & Issues
-* *None.*
+* **Ragas Evaluation Rate Limits & Slowness**: Running Ragas evaluations on the Gemini Free Tier API key is extremely slow (taking ~12 minutes for a 20-unit iteration run) and frequently results in `N/A` for all final metrics (`faithfulness`, `answer_relevancy`, `context_precision`, `context_recall`). This is due to Gemini's free tier rate limit of 15 Requests Per Minute (RPM). Because Ragas triggers multiple evaluation API calls per metric for each question, even sequential execution (`max_workers=1`) quickly triggers 429 `RESOURCE_EXHAUSTED` blocks, leading to massive retry delays and incomplete (`N/A`) metric tables.
 
 ## Context Notes for Next Session
 * System Python 3.11 environment in AppData must be used to run commands (`py -3.11 ...`) to bypass local WDAC blocks.
