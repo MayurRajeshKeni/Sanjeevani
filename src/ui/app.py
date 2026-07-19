@@ -1,10 +1,14 @@
 import os
+import sys
 import json
 import time
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 from langchain_core.documents import Document
+
+# Ensure the project root is in the python path for relative src imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 # Import ingestion, retrieval, and agent compilation
 from src.ingestion.loaders import load_directory
