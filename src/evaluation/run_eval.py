@@ -4,6 +4,18 @@ import sys
 # Add project root to sys.path for robust module importing
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+# Inject mock langchain_community modules to prevent Ragas import failures in modern LangChain versions
+import types
+from langchain_google_vertexai import ChatVertexAI, VertexAI
+m1 = types.ModuleType("langchain_community.chat_models.vertexai")
+m1.ChatVertexAI = ChatVertexAI
+sys.modules["langchain_community.chat_models.vertexai"] = m1
+
+m2 = types.ModuleType("langchain_community.llms")
+m2.VertexAI = VertexAI
+sys.modules["langchain_community.llms"] = m2
+
+
 import pandas as pd
 # pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
