@@ -16,7 +16,7 @@
 ## Phase 3: Agentic Orchestration (LangGraph)
 * **[NEW]** Define the rigid `RagAgentState` schema using Python's `TypedDict` to track original queries, retries, and critique scores.
 * Build the Generation Node (Groq API).
-* Build the Critic Node (Gemini 1.5 Flash API).
+* Build the Critic Node (Gemini 2.0 Flash API).
 * Map the conditional edges (Pass -> End, Fail -> Rewrite Query & Loop to Retrieval).
 * *Milestone:* A working terminal-based self-healing Q&A script that safely degrades after 3 failed loops.
 
@@ -30,5 +30,7 @@
   * Added dynamic document uploading and automatic RAG database re-indexing to ingest custom files on the fly.
   * Built an interactive Golden Dataset question editor (`st.data_editor`) to CRUD benchmark questions inside the app.
   * Enforced min/max zoom limits (0.5 to 2.0) and pan boundary constraints (800px limit) in Vis.js to keep graph containment.
-  * Upgraded Ragas LLM to `gemini-2.0-flash` with sequential `RunConfig(max_workers=1)` and built exponential backoff retries on rate limit (429) warnings to fully stabilize benchmarking runs.
+  * Upgraded Ragas LLM and critic models to `gemini-2.0-flash` with sequential `RunConfig(max_workers=1)` and built exponential backoff retries on rate limit (429) warnings to fully stabilize benchmarking runs.
+  * Developed a dynamic runtime `sys.modules` mock module injector mapping legacy VertexAI imports to modern `langchain-google-vertexai`, resolving Ragas crash events without downgrading LangChain or LangGraph.
+  * Upgraded the Vis.js Knowledge Graph viewer to support unified multiselect document filtering and side-by-side comparison of 2 disjoint topics.
 * *Milestone:* Fully operational graphical benchmarking app that blocks pull requests if metrics regress.
