@@ -501,7 +501,7 @@ with tab_bench:
             st.rerun()
 
 # ================= TAB 3: KNOWLEDGE GRAPH =================
-# ================= TAB 3: KNOWLEDGE GRAPH =================
+
 with tab_graph:
     st.markdown("### Parsed Knowledge Graph Viewer")
     st.markdown("Interactive structure showing concepts, levels, and associated details.")
