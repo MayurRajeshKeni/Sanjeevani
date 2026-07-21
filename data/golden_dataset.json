@@ -34,5 +34,104 @@
     "expected_context": [
       "The Ragas/TruLens evaluation node must explicitly measure and log these four native metrics: 1. faithfulness 2. answer_relevance 3. context_precision 4. context_recall"
     ]
+  },
+  {
+    "question": "What is a Kubernetes Pod?",
+    "ground_truth": "A Pod is the smallest deployable unit of computing that you can create and manage in Kubernetes.",
+    "expected_context": [
+      "A Pod (from Pod of whales or pea pod) is the smallest deployable unit of computing that you can create and manage in Kubernetes."
+    ]
+  },
+  {
+    "question": "What is a Kubernetes Service?",
+    "ground_truth": "A Service is an abstract way to expose an application running on a set of Pods as a network service.",
+    "expected_context": [
+      "A Service is an abstract way to expose an application running on a set of Pods as a network service."
+    ]
+  },
+  {
+    "question": "What does the kube-apiserver do in a Kubernetes control plane?",
+    "ground_truth": "The API server is a component of the Kubernetes control plane that exposes the Kubernetes API. It is the front end for the Kubernetes control plane.",
+    "expected_context": [
+      "The API server is a component of the Kubernetes control plane that exposes the Kubernetes API. The API server is the front end for the Kubernetes control plane."
+    ]
+  },
+  {
+    "question": "What is a Kubernetes Deployment?",
+    "ground_truth": "A Deployment provides declarative updates for Pods and ReplicaSets. You describe a desired state in a Deployment, and the Deployment Controller changes the actual state to the desired state at a controlled rate.",
+    "expected_context": [
+      "A Deployment provides declarative updates for Pods and ReplicaSets. You describe a desired state in a Deployment, and the Deployment Controller changes the actual state to the desired state at a controlled rate."
+    ]
+  },
+  {
+    "question": "What is the difference between a DaemonSet and a ReplicaSet in Kubernetes?",
+    "ground_truth": "A DaemonSet ensures that all (or some) Nodes run a copy of a Pod, whereas a ReplicaSet is used to run a specified number of pod replicas.",
+    "expected_context": [
+      "A DaemonSet ensures that all (or some) Nodes run a copy of a Pod.",
+      "ReplicaSet ensures that a specified number of pod replicas are running at any given time."
+    ]
+  },
+  {
+    "question": "What is a Kubernetes ConfigMap?",
+    "ground_truth": "A ConfigMap is an API object used to store non-confidential data in key-value pairs. Pods can consume ConfigMaps as environment variables, command-line arguments, or as configuration files in a volume.",
+    "expected_context": [
+      "A ConfigMap is an API object used to store non-confidential data in key-value pairs. Pods can consume ConfigMaps as environment variables, command-line arguments, or as configuration files in a volume."
+    ]
+  },
+  {
+    "question": "What is the purpose of Kubernetes namespaces?",
+    "ground_truth": "Namespaces provide a scope for names. Names of resources need to be unique within a namespace, but not across namespaces.",
+    "expected_context": [
+      "Kubernetes supports multiple virtual clusters backed by the same physical cluster. These virtual clusters are called namespaces.",
+      "Namespaces provide a scope for names. Names of resources need to be unique within a namespace, but not across namespaces."
+    ]
+  },
+  {
+    "question": "How does Role-Based Access Control RBAC authorize API requests in Kubernetes?",
+    "ground_truth": "RBAC uses the rbac.authorization.k8s.io API group to drive authorization decisions, allowing cluster administrators to dynamically configure policies through Roles, ClusterRoles, RoleBindings, and ClusterRoleBindings.",
+    "expected_context": [
+      "Role-based access control (RBAC) is a method of regulating access to computer or network resources based on the roles of individual users within your enterprise.",
+      "RBAC uses the rbac.authorization.k8s.io API group to drive authorization decisions, allowing cluster administrators to dynamically configure policies through the Kubernetes API."
+    ]
+  },
+  {
+    "question": "What is the difference between PersistentVolume PV and PersistentVolumeClaim PVC?",
+    "ground_truth": "A PersistentVolume is a piece of storage in the cluster that has been provisioned by an administrator or dynamically provisioned using Storage Classes, whereas a PersistentVolumeClaim is a request for storage by a user that consumes PV resources.",
+    "expected_context": [
+      "A PersistentVolume (PV) is a piece of storage in the cluster that has been provisioned by an administrator or dynamically provisioned using Storage Classes.",
+      "A PersistentVolumeClaim (PVC) is a request for storage by a user. It is similar to a Pod. Pods consume node resources and PVCs consume PV resources."
+    ]
+  },
+  {
+    "question": "How does Horizontal Pod Autoscaler HPA scale workloads?",
+    "ground_truth": "The Horizontal Pod Autoscaler automatically updates a workload resource (such as a Deployment or StatefulSet), with the aim of scaling the workload to match demand by adjusting replication based on target resource utilization metrics.",
+    "expected_context": [
+      "In Kubernetes, a Horizontal Pod Autoscaler automatically updates a workload resource (such as a Deployment or StatefulSet), with the aim of scaling the workload to match demand.",
+      "The Horizontal Pod Autoscaler scales the number of Pods in a replication controller, deployment, replica set or stateful set based on observed CPU utilization."
+    ]
+  },
+  {
+    "question": "What is a Kubernetes Secret and how is it different from a ConfigMap?",
+    "ground_truth": "A Secret is an object that contains a small amount of sensitive data such as a password, a token, or a key, whereas a ConfigMap is used for non-confidential key-value configurations. Secrets are stored with base64 encoding.",
+    "expected_context": [
+      "A Secret is an object that contains a small amount of sensitive data such as a password, a token, or a key.",
+      "ConfigMap is an API object used to store non-confidential data in key-value pairs."
+    ]
+  },
+  {
+    "question": "How do Taints and Tolerations affect Pod scheduling?",
+    "ground_truth": "Taints allow a node to repel a set of pods. Tolerations are applied to pods and allow the scheduler to schedule pods on nodes with matching taints.",
+    "expected_context": [
+      "Taints allow a node to repel a set of pods.",
+      "Tolerations are applied to pods, and allow (but do not require) the pods to schedule onto nodes with matching taints."
+    ]
+  },
+  {
+    "question": "What is the primary role of the Kubelet on a Kubernetes node?",
+    "ground_truth": "The kubelet is the primary node agent that runs on each node. It registers the node with the apiserver and ensures that containers described in PodSpecs are running and healthy.",
+    "expected_context": [
+      "The kubelet is the primary 'node agent' that runs on each node.",
+      "The kubelet takes a set of PodSpecs that are provided through various mechanisms and ensures that the containers described in those PodSpecs are running and healthy."
+    ]
   }
 ]

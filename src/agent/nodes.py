@@ -96,8 +96,23 @@ class AgentNodes:
             HumanMessage(content=original_query)
         ]
         
-        response = self.generator_llm.invoke(messages)
-        draft = response.content
+        import time
+        max_retries = 3
+        backoff = 2
+        draft = ""
+        for attempt in range(max_retries):
+            try:
+                response = self.generator_llm.invoke(messages)
+                draft = response.content
+                break
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    print(f"[Node: Generate] Error - Failed to query generator model after {max_retries} attempts: {e}")
+                    draft = "Information not found due to generation model failure."
+                else:
+                    sleep_time = backoff ** attempt
+                    print(f"[Node: Generate] Connection reset or rate limited. Retrying in {sleep_time}s... Error: {e}")
+                    time.sleep(sleep_time)
         print(f"[Node: Generate] Draft answer generated ({len(draft)} characters).")
         return {"draft_answer": draft}
         

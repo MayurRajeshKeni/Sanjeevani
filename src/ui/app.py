@@ -103,7 +103,8 @@ def initialize_rag_pipeline():
     with open(graph_path, "w", encoding="utf-8") as f:
         json.dump(graph_data, f, indent=2, ensure_ascii=False)
         
-    vector_engine = VectorRetrievalEngine(chunks)
+    faiss_dir = os.path.join(processed_dir, "faiss_index")
+    vector_engine = VectorRetrievalEngine(chunks, persist_dir=faiss_dir)
     sparse_engine = SparseRetrievalEngine(chunks)
     graph_engine = GraphRetrievalEngine(graph_path)
     hybrid_retriever = HybridRetriever(vector_engine, sparse_engine, graph_engine)

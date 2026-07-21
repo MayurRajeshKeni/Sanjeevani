@@ -6,3 +6,5 @@ __pycache__/
 .env
 .system_generated/
 .gemini/
+z_docs/kubernetes_docs/
+temp_k8s_clone/

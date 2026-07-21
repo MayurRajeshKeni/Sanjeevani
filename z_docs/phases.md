@@ -34,3 +34,13 @@
   * Developed a dynamic runtime `sys.modules` mock module injector mapping legacy VertexAI imports to modern `langchain-google-vertexai`, resolving Ragas crash events without downgrading LangChain or LangGraph.
   * Upgraded the Vis.js Knowledge Graph viewer to support unified multiselect document filtering and side-by-side comparison of 2 disjoint topics.
 * *Milestone:* Fully operational graphical benchmarking app that blocks pull requests if metrics regress.
+
+---
+
+## Post-Phase 4 Enhancements: Reference Manual Scaling & Cache Optimizations
+
+*   **[NEW] Reference Manual Scaling Checkout**: Developed `download_k8s_docs.py` utilizing the `--depth=1` sparse cloning optimization. It pulls and extracts 1,675 Kubernetes English documentation files into `z_docs/kubernetes_docs/` for scalability testing in under 10 seconds.
+*   **[NEW] Operations Setup Overhaul**: Rewrote `runbook.md` to document complete virtualenv, credentials, scaling dataset operations, cache invalidation, and troubleshooting guidelines.
+*   **[NEW] Golden Dataset Expansion**: Added 9 technical Kubernetes architectural questions to `data/golden_dataset.json` (covering Pods, Services, api-server, Deployments, DaemonSets, ConfigMaps, Namespaces, RBAC, PV/PVC, HPA, Secrets, scheduling taints/tolerations, Kubelet).
+*   **[NEW] FAISS Index Disk Caching**: Optimized `VectorRetrievalEngine` to persist FAISS indexes to `data/processed/faiss_index/`, reducing subsequent ingestion times for 1,675 documents from 6 minutes to under 0.1 seconds.
+*   **[NEW] Groq Connection Resilience**: Added exponential backoff retry loops inside `generate_node` to protect Q&A query streams from remote Groq socket resets (`WinError 10054`).

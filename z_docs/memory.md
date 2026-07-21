@@ -2,9 +2,9 @@
 *(Instructions for AI: Read this file at the start of every session. Update this file at the end of every session or when a major feature is complete. Do not change the structure, only update the values.)*
 
 ## Current Status
-* **Project Phase:** All Phases Complete (Phases 1-4)
-* **Current Active Task:** Benchmark evaluations fully operational and Streamlit UI dashboard running.
-* **Last Modified:** July 18, 2026
+* **Project Phase:** Scaled testing on Kubernetes website documentation (1,675 markdown files), expanded golden dataset (14 questions), and automated evaluations.
+* **Current Active Task:** Benchmark evaluations fully operational on scaled dataset and Streamlit UI dashboard running.
+* **Last Modified:** July 21, 2026
 
 ## Completed Features
 * Architectural Planning & Documentation Complete (Overview, PRD, Architecture, Rules, Phases, Design finalized).
@@ -26,6 +26,10 @@
   * Switched evaluations and critique nodes to `gemini-2.0-flash` to leverage higher RPM quotas.
   * Configured Ragas `RunConfig(max_workers=1)` and developed exponential backoff retry loops in critique and rewrite nodes to handle Google Developer API rate limit (429) errors gracefully.
   * Added dynamic file upload ingestion into `z_docs` and an in-app interactive Golden Dataset editor.
+* Scaled Ingestion & Reference Manual testing:
+  * Programmed `download_k8s_docs.py` to sparse-checkout and extract 1,675 Kubernetes English documentation files into `z_docs/kubernetes_docs/`, utilizing the `--depth=1` cloning speed optimization.
+  * Formulated and appended 9 detailed technical Kubernetes architectural questions to `data/golden_dataset.json` (covering Pods, Services, api-server, Deployments, DaemonSets, ConfigMaps, Namespaces, RBAC, PV/PVC, HPA, Secrets, scheduling taints/tolerations, Kubelet).
+  * Overhauled `runbook.md` to document complete virtualenv, credentials, scaling dataset operations, cache invalidation, and troubleshooting guidelines.
 
 ## Known Bugs & Issues
 * **Ragas Evaluation Rate Limits & Slowness**: Running Ragas evaluations on the Gemini Free Tier API key is extremely slow (taking ~12 minutes for a 20-unit iteration run) and frequently results in `N/A` for all final metrics (`faithfulness`, `answer_relevancy`, `context_precision`, `context_recall`). This is due to Gemini's free tier rate limit of 15 Requests Per Minute (RPM). Because Ragas triggers multiple evaluation API calls per metric for each question, even sequential execution (`max_workers=1`) quickly triggers 429 `RESOURCE_EXHAUSTED` blocks, leading to massive retry delays and incomplete (`N/A`) metric tables.

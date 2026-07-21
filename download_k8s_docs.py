@@ -1,6 +1,7 @@
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 # --- Configuration ---
@@ -10,28 +11,36 @@ TARGET_DIR = os.path.join(os.getcwd(), "z_docs", "kubernetes_docs")
 TEMP_DIR = os.path.join(os.getcwd(), "temp_k8s_clone")
 
 def run_command(cmd, cwd=None):
-    """Executes a shell command safely."""
-    subprocess.run(cmd, cwd=cwd, shell=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    """Executes a shell command safely, letting stderr print for diagnostics."""
+    subprocess.run(cmd, cwd=cwd, shell=True, check=True)
 
 def extract_markdown():
-    print("🚀 Initializing Sparse Checkout of Kubernetes Repository...")
+    print("[SPARSE-CHECKOUT] Initializing Sparse Checkout of Kubernetes Repository...")
     
+    # Helper to clean read-only git files on Windows
+    def remove_readonly(func, path, _):
+        os.chmod(path, 0o777)
+        func(path)
+
     # 1. Clean up old runs
     if os.path.exists(TEMP_DIR):
-        shutil.rmtree(TEMP_DIR)
+        try:
+            shutil.rmtree(TEMP_DIR, onerror=remove_readonly)
+        except Exception as e:
+            print(f"[CLEANUP ERROR] Failed to clean old runs: {e}")
     os.makedirs(TARGET_DIR, exist_ok=True)
 
     try:
         # 2. Clone ONLY the repository structure (no file contents yet)
-        print("📦 Cloning repository metadata (this takes a few seconds)...")
-        run_command(f"git clone --filter=blob:none --sparse {REPO_URL} {TEMP_DIR}")
+        print("[CLONING] Cloning repository metadata (this takes a few seconds)...")
+        run_command(f"git clone --depth=1 --filter=blob:none --sparse {REPO_URL} {TEMP_DIR}")
 
         # 3. Tell Git to download ONLY the documentation folder
-        print(f"🎯 Fetching specific directory: {SPARSE_DIR}...")
+        print(f"[FETCHING] Fetching specific directory: {SPARSE_DIR}...")
         run_command(f"git sparse-checkout set {SPARSE_DIR}", cwd=TEMP_DIR)
 
         # 4. Walk the directory and extract ONLY .md files
-        print("📂 Moving Markdown files to z_docs...")
+        print("[MOVING] Moving Markdown files to z_docs...")
         md_count = 0
         source_path = os.path.join(TEMP_DIR, *SPARSE_DIR.split('/'))
         
@@ -47,21 +56,24 @@ def extract_markdown():
                     shutil.copy2(source_file, target_file)
                     md_count += 1
 
-        print(f"✅ Success! Extracted {md_count} Markdown files to {TARGET_DIR}")
+        print(f"[SUCCESS] Extracted {md_count} Markdown files to {TARGET_DIR}")
 
     except Exception as e:
-        print(f"❌ Error during extraction: {e}")
+        print(f"[ERROR] Error during extraction: {e}")
         
     finally:
-        # 5. Clean up the massive temp git folder
+        # 5. Clean up the temp git folder
         if os.path.exists(TEMP_DIR):
-            print("🧹 Cleaning up temporary git files...")
+            print("[CLEANUP] Cleaning up temporary git files...")
             # On Windows, git objects can be read-only, requiring a special remove handler
             def remove_readonly(func, path, _):
                 os.chmod(path, 0o777)
                 func(path)
-            shutil.rmtree(TEMP_DIR, onerror=remove_readonly)
-            print("✨ Done!")
+            try:
+                shutil.rmtree(TEMP_DIR, onerror=remove_readonly)
+            except Exception as e:
+                print(f"[CLEANUP ERROR] Failed to clean up {TEMP_DIR}: {e}")
+            print("[CLEANUP COMPLETE] Done!")
 
 if __name__ == "__main__":
     extract_markdown()
