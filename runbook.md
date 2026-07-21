@@ -1,88 +1,128 @@
-# Sanjeevani Runbook
+# Project Sanjeevani: Operations & Setup Runbook
 
-This runbook contains the concise and concrete steps required to set up, configure, and run **Project Sanjeevani**—a Tri-Modal Self-Healing Retrieval-Augmented Generation (RAG) system.
+This document provides complete, step-by-step instructions to initialize, configure, execute, and benchmark **Project Sanjeevani**—the hybrid Tri-Modal Self-Healing Retrieval-Augmented Generation (RAG) pipeline.
 
 ---
 
-## 🛠️ Step 1: Environment Setup
+## 🛠️ Step 1: Environment Activation & Dependency Setup
 
-The project includes an existing virtual environment directory (`.venv`). Follow these commands to activate the virtual environment and install the required dependencies.
+The workspace contains a pre-configured Python virtual environment directory (`.venv`). Follow these instructions to activate the environment and install dependencies.
 
 ### 1. Activate the Virtual Environment
-Depending on your terminal and operating system, run one of the following commands:
+Execute the command corresponding to your terminal and operating system:
 
-* **Windows (PowerShell):**
-  ```powershell
-  .venv\Scripts\Activate.ps1
-  ```
-* **Windows (Command Prompt):**
-  ```cmd
-  .venv\Scripts\activate.bat
-  ```
-* **macOS / Linux:**
-  ```bash
-  source .venv/bin/activate
-  ```
+*   **Windows (PowerShell):**
+    ```powershell
+    .venv\Scripts\Activate.ps1
+    ```
+*   **Windows (Command Prompt):**
+    ```cmd
+    .venv\Scripts\activate.bat
+    ```
+*   **macOS / Linux:**
+    ```bash
+    source .venv/bin/activate
+    ```
 
-### 2. Install Dependencies
-Once the virtual environment is active, install the packages defined in [requirements.txt](file:///c:/Users/asus/OneDrive/Documents/Projects/Sanjeevani/requirements.txt):
+*Note: On Windows systems with strict WDAC (Windows Defender Application Control) policies, run python scripts explicitly using system-wide Python executors (e.g. `py -3.11 <script_name>`).*
+
+### 2. Install Project Dependencies
+Once the virtual environment is active, install the required packages:
 ```bash
 pip install -r requirements.txt
 ```
 
 > [!NOTE]
-> The codebase uses the Google GenAI SDK directly in [nodes.py](file:///c:/Users/asus/OneDrive/Documents/Projects/Sanjeevani/src/agent/nodes.py#L7). If you encounter a `ModuleNotFoundError` for `google.genai`, install it manually:
+> Sanjeevani calls the Google GenAI SDK directly in the self-healing critique logic (`src/agent/nodes.py`). If you experience a `ModuleNotFoundError` for the `google.genai` namespace, install it manually:
 > ```bash
 > pip install google-genai
 > ```
 
 ---
 
-## 🔑 Step 2: Environment Variables Configuration
+## 🔑 Step 2: Environment Credentials Configuration
 
-The project relies on external API keys configured in the [.env](file:///c:/Users/asus/OneDrive/Documents/Projects/Sanjeevani/.env) file located in the root directory. Ensure the following keys are populated:
+Copy or rename the template credentials file to `.env` in the root folder, and populate the following remote cloud API keys:
 
 ```env
 GROQ_API_KEY=your_groq_api_key_here
 GOOGLE_API_KEY=your_gemini_api_key_here
 ```
 
-* **GROQ_API_KEY**: Used for the answer generator node running `llama-3.1-8b-instant`.
-* **GOOGLE_API_KEY**: Used for the hallucination/groundedness check and query rewriting running `gemini-2.0-flash`.
+*   **`GROQ_API_KEY`**: Authenticates the high-speed draft answer generator node running `llama-3.1-8b-instant`.
+*   **`GOOGLE_API_KEY`**: Authenticates the self-healing critic node and rewriter query optimization steps running `gemini-2.0-flash`.
 
 ---
 
-## 🚀 Step 3: Running the Application
+## 📂 Step 3: Scaling & Data Ingestion (Kubernetes Website Docs)
 
-There are three key entry points for executing and evaluating the RAG pipeline.
+To test the retrieval latency, RRF ranking weights, and database scaling capabilities of the Tri-Modal pipeline with real-world technical reference manuals, you can load external datasets.
 
-### Option A: Run the Standalone Pipeline (Console Test)
-To execute a quick, end-to-end check of the document chunking, graph parsing, hybrid retrieval, and LangGraph workflow:
+### 1. Download the Kubernetes English Documentation
+Run the helper download script. It performs a sparse git clone to download ONLY the markdown source directory from the Kubernetes website repository, saving it in a flat-name layout to avoid nested directories:
+```bash
+python download_k8s_docs.py
+```
+This clones all Kubernetes English markdown guides to `z_docs/kubernetes_docs/`.
+
+### 2. Force Index Invalidation (Re-indexing New Files)
+The dashboard and console indexers cache database files to improve startup speeds. If you have downloaded new manual documents or edited files in `z_docs/` and want to force the pipeline to fully rebuild the Vector, Lexical, and Graph indexes, delete the processed database folder:
+
+*   **Windows (cmd):**
+    ```cmd
+    rmdir /s /q data\processed
+    ```
+*   **Windows (PowerShell):**
+    ```powershell
+    Remove-Item -Recurse -Force data\processed
+    ```
+*   **macOS / Linux:**
+    ```bash
+    rm -rf data/processed
+    ```
+The next time you start the app, the pipeline will automatically re-ingest all files in `z_docs/` and build clean databases.
+
+---
+
+## 🚀 Step 4: Running the Application
+
+There are three key entry points for running the Sanjeevani pipeline.
+
+### Option A: Run the Standalone Pipeline (Console Diagnostic)
+To run a fast, end-to-end check of the ingestion loaders, indexing, RRF retrieval, and LangGraph self-healing routing state machine in the console:
 ```bash
 python main.py
 ```
-This runs test queries defined in [main.py](file:///c:/Users/asus/OneDrive/Documents/Projects/Sanjeevani/main.py) and prints the self-healing telemetry and final response directly in your terminal.
+This runs pre-defined queries and outputs live node trace telemetry directly in your terminal.
 
 ### Option B: Launch the Interactive Dashboard (Streamlit UI)
-To launch the interactive, premium web dashboard that provides a chat interface, real-time Reciprocal Rank Fusion (RRF) metrics, and dynamic knowledge graph rendering:
+To launch the interactive, dark-themed Streamlit dashboard with real-time chatbot playgrounds, live LangGraph trace logging, telemetry bar charts, and interactive Vis.js knowledge graphs:
 ```bash
 streamlit run src/ui/app.py
 ```
-After executing, Streamlit will open the dashboard in your default web browser (typically at `http://localhost:8501`).
+Streamlit will launch and bind to `http://localhost:8501`.
 
 ### Option C: Run Ragas Evaluation Benchmarks
-To run the automated validation suite comparing system outputs against the golden dataset truths:
+To execute the automated evaluation benchmark suite checking system accuracy metrics against the Golden Dataset:
 ```bash
 python src/evaluation/run_eval.py
 ```
-This generates and saves metrics (Groundedness/Faithfulness, Answer Relevancy, Context Precision, and Context Recall) to `data/processed/eval_results.json`.
+This runs 20 metric runs across the test queries and saves results to `data/processed/eval_results.json`.
 
 ---
 
-## 📂 Project Structure Map
+## 🩺 Step 5: Troubleshooting & Diagnostics
 
-* [main.py](file:///c:/Users/asus/OneDrive/Documents/Projects/Sanjeevani/main.py) - Entry point for the console test pipeline.
-* [src/ui/app.py](file:///c:/Users/asus/OneDrive/Documents/Projects/Sanjeevani/src/ui/app.py) - Streamlit dashboard application script.
-* [src/evaluation/run_eval.py](file:///c:/Users/asus/OneDrive/Documents/Projects/Sanjeevani/src/evaluation/run_eval.py) - Ragas automated benchmarking test runner.
-* [requirements.txt](file:///c:/Users/asus/OneDrive/Documents/Projects/Sanjeevani/requirements.txt) - List of application requirements.
-* [.env](file:///c:/Users/asus/OneDrive/Documents/Projects/Sanjeevani/.env) - Credentials configuration file.
+### 1. Quota Exhaustion (HTTP 429 Errors)
+If you hit Gemini or Groq rate limits, the Critic node automatically defaults to a Groundedness score of `0.00` and displays:
+`[RESOURCE LIMIT] API rate limits exceeded. State machine routing query for query optimization and healing.`
+*Solution:* Wait 60 seconds for the token-per-minute (TPM) or request-per-minute (RPM) windows to reset.
+
+### 2. Port Conflict (Port 8501 Already in Use)
+If launching Streamlit fails because port 8501 is taken:
+```bash
+streamlit run src/ui/app.py --server.port 8502
+```
+
+### 3. Local RAM Footprint Constraints
+The local vector and sparse search engines run entirely in memory. To ensure overall system stability on 16GB host RAM limit systems, the local index footprint is mapped below 10GB. Verify local memory usage in the Streamlit Sidebar diagnostics panel.
