@@ -504,43 +504,118 @@ with tab_bench:
 # ================= TAB 3: KNOWLEDGE GRAPH =================
 
 with tab_graph:
-    st.markdown("### Parsed Knowledge Graph Viewer")
-    st.markdown("Interactive structure showing concepts, levels, and associated details.")
+    st.markdown("### Parsed Knowledge Graph Topology")
+    st.markdown("Clean, hierarchical visual structure mapping document concepts, sections, and parent-child relationships.")
     
     nodes_list = graph_data.get("nodes", []) if isinstance(graph_data, dict) else []
     edges_list = graph_data.get("edges", []) if isinstance(graph_data, dict) else []
 
     # Get list of unique files/topics
     unique_files = sorted(list({os.path.basename(n.get("source_file", "")) for n in nodes_list if n.get("source_file")}))
-    
+
     # Helper to generate the HTML Vis.js content
-    def generate_vis_html(nodes, edges, container_id="network", height=400):
+    def generate_vis_html(nodes, edges, layout_type="dag_ud", container_id="network", height=480):
         vis_nodes = []
         for n in nodes:
-            # Color coding nodes based on heading level to look less cluttered
             level = n.get("level", 1)
-            bg_color = '#1E293B' if level > 1 else '#0B132B'
-            border_color = '#00FFAA' if level == 1 else '#00F0FF'
+            
+            # Sleek dot sizing and color palette by hierarchy level
+            if level == 0:
+                color_bg = '#00F0FF'
+                color_border = '#FFFFFF'
+                shape_size = 22
+            elif level == 1:
+                color_bg = '#00FFAA'
+                color_border = '#00FFAA'
+                shape_size = 16
+            elif level == 2:
+                color_bg = '#A855F7'
+                color_border = '#A855F7'
+                shape_size = 12
+            else:
+                color_bg = '#38BDF8'
+                color_border = '#38BDF8'
+                shape_size = 8
+
+            title_clean = n["title"]
+            short_label = title_clean if len(title_clean) <= 22 else title_clean[:20] + "..."
+            
+            snippet = n.get("content", "")[:250].replace('"', "'").replace('\n', ' ')
+            if len(n.get("content", "")) > 250:
+                snippet += "..."
+                
             vis_nodes.append({
                 "id": n["id"],
-                "label": n["title"][:25] + "..." if len(n["title"]) > 25 else n["title"],
-                "title": f"<b>{n['title']}</b><br/><br/>" + (n.get("content", "")[:300] + "..." if n.get("content") else "No associated text content."),
+                "label": short_label,
+                "title": f"<div style='padding:4px;'><b>{title_clean}</b><br/><span style='color:#94A3B8; font-size:10px;'>Level {level} &bull; {os.path.basename(n.get('source_file', ''))}</span><br/><br/>{snippet}</div>",
+                "level": level,
+                "shape": "dot",
+                "size": shape_size,
                 "color": {
-                    "background": bg_color,
-                    "border": border_color,
-                    "highlight": { "background": '#00FFAA', "border": '#00FFAA' }
-                }
+                    "background": color_bg,
+                    "border": color_border,
+                    "highlight": { "background": '#FFFFFF', "border": '#00F0FF' }
+                },
+                "font": { "color": '#F8FAFC', "face": 'Inter, sans-serif', "size": 11, "vadjust": 2 }
             })
             
         vis_edges = []
         for e in edges:
             vis_edges.append({
                 "from": e["source"],
-                "to": e["target"]
+                "to": e["target"],
+                "color": { "color": '#334155', "highlight": '#00F0FF' },
+                "arrows": { "to": { "enabled": True, "scaleFactor": 0.5 } },
+                "smooth": { "type": "cubicBezier", "forceDirection": "vertical", "roundness": 0.4 }
             })
             
         nodes_json = json.dumps(vis_nodes)
         edges_json = json.dumps(vis_edges)
+        
+        # Configure layout options
+        if layout_type == "dag_ud":
+            layout_config = """
+              layout: {
+                hierarchical: {
+                  enabled: true,
+                  direction: 'UD',
+                  sortMethod: 'directed',
+                  levelSeparation: 90,
+                  nodeSpacing: 140,
+                  treeSpacing: 160
+                }
+              },
+              physics: { enabled: false }
+            """
+        elif layout_type == "dag_lr":
+            layout_config = """
+              layout: {
+                hierarchical: {
+                  enabled: true,
+                  direction: 'LR',
+                  sortMethod: 'directed',
+                  levelSeparation: 140,
+                  nodeSpacing: 60,
+                  treeSpacing: 100
+                }
+              },
+              physics: { enabled: false }
+            """
+        else: # force_cluster
+            layout_config = """
+              physics: {
+                enabled: true,
+                barnesHut: {
+                  gravitationalConstant: -2500,
+                  centralGravity: 0.2,
+                  springLength: 100,
+                  springConstant: 0.04,
+                  damping: 0.09,
+                  avoidOverlap: 0.8
+                },
+                stabilization: { enabled: true, iterations: 120 }
+              }
+            """
         
         return f"""
         <html>
@@ -551,19 +626,19 @@ with tab_graph:
               width: 100%;
               height: {height}px;
               background-color: #0E1117;
-              border: 1px solid #334155;
-              border-radius: 6px;
+              border: 1px solid #1E293B;
+              border-radius: 8px;
             }}
-            /* Custom vis tooltip styling override */
             div.vis-tooltip {{
               background-color: #1E293B !important;
               color: #F8FAFC !important;
               border: 1px solid #475569 !important;
-              border-radius: 4px !important;
+              border-radius: 6px !important;
               font-family: 'Inter', sans-serif !important;
-              padding: 8px !important;
+              padding: 10px !important;
               font-size: 11px !important;
-              max-width: 280px !important;
+              max-width: 300px !important;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.5);
             }}
           </style>
         </head>
@@ -576,58 +651,19 @@ with tab_graph:
             var data = {{ nodes: nodes, edges: edges }};
             var options = {{
               nodes: {{
-                shape: 'box',
-                margin: 10,
-                font: {{ color: '#F8FAFC', face: 'Inter, sans-serif', size: 11 }}
+                borderWidth: 1.5,
+                shadow: true
               }},
-              edges: {{
-                color: {{ color: '#475569', highlight: '#00FFAA' }},
-                arrows: 'to',
-                smooth: {{ type: 'continuous' }}
+              interaction: {{
+                hover: true,
+                tooltipDelay: 100,
+                zoomView: true,
+                dragView: true
               }},
-              physics: {{
-                stabilization: {{
-                  enabled: true,
-                  iterations: 80
-                }},
-                barnesHut: {{ gravitationalConstant: -1000, centralGravity: 0.3, springLength: 90 }}
-              }}
+              {layout_config}
             }};
             var network = new vis.Network(container, data, options);
             
-            // Enforce zoom and translation pan constraints
-            var MIN_ZOOM = 0.5;
-            var MAX_ZOOM = 2.0;
-            var PAN_LIMIT = 800;
-            
-            network.on("zoom", function(params) {{
-              if (params.scale < MIN_ZOOM) {{
-                network.moveTo({{ scale: MIN_ZOOM }});
-              }} else if (params.scale > MAX_ZOOM) {{
-                network.moveTo({{ scale: MAX_ZOOM }});
-              }}
-            }});
-            
-            network.on("dragEnd", function() {{
-              var pos = network.getViewPosition();
-              var newX = pos.x;
-              var newY = pos.y;
-              var reset = false;
-              
-              if (pos.x > PAN_LIMIT) {{ newX = PAN_LIMIT; reset = true; }}
-              else if (pos.x < -PAN_LIMIT) {{ newX = -PAN_LIMIT; reset = true; }}
-              
-              if (pos.y > PAN_LIMIT) {{ newY = PAN_LIMIT; reset = true; }}
-              else if (pos.y < -PAN_LIMIT) {{ newY = -PAN_LIMIT; reset = true; }}
-              
-              if (reset) {{
-                network.moveTo({{
-                  position: {{ x: newX, y: newY }},
-                  rescale: false
-                }});
-              }}
-            }});
-
             network.once("stabilizationIterationsDone", function() {{
               network.setOptions({{ physics: false }});
             }});
@@ -636,93 +672,110 @@ with tab_graph:
         </html>
         """
 
-    # Layout modes selectors
-    st.markdown("#### Layout Settings")
-    layout_mode = st.radio("Topology Layout View Mode:", ["Unified Topology View", "Compare 2 Disjoint Topics Side-by-Side"], horizontal=True)
-    
-    # Filter concepts input
-    search_q = st.text_input("Filter concepts by name or content globally:", "")
+    # Visual Legend Header
+    st.markdown("""
+    <div style='display: flex; gap: 15px; margin-bottom: 15px; background-color: #1A1C23; padding: 10px 16px; border-radius: 6px; border: 1px solid #334155; font-size: 0.82rem;'>
+        <span style='color: #00F0FF; font-weight:600;'>&#9679; Document Root (Level 0)</span>
+        <span style='color: #00FFAA; font-weight:600;'>&#9679; Main Concept (H1)</span>
+        <span style='color: #A855F7; font-weight:600;'>&#9679; Section (H2)</span>
+        <span style='color: #38BDF8; font-weight:600;'>&#9679; Detail (H3+)</span>
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.markdown("---")
+    # Controls Panel
+    c1, c2, c3 = st.columns([1.2, 1.2, 1.6])
+    with c1:
+        layout_mode = st.selectbox(
+            "Topology View Layout:",
+            ["Hierarchical Tree (Top-Down)", "Hierarchical Tree (Left-Right)", "Force-Directed Cluster"],
+            index=0
+        )
+    with c2:
+        depth_filter = st.selectbox(
+            "Heading Depth Level Filter:",
+            ["All Levels (Complete Topology)", "Root & Main Concepts (Level 0 & H1)", "Sections & Subsections (Level 0, H1 & H2)"],
+            index=0
+        )
+    with c3:
+        selected_topics = st.multiselect(
+            "Filter Source Documents:",
+            unique_files,
+            default=unique_files
+        )
 
-    if layout_mode == "Unified Topology View":
-        # Multiselect for documents
-        selected_topics = st.multiselect("Select Topics/Documents to render:", unique_files, default=unique_files)
-        
-        # Filter nodes based on selected files
-        filtered_nodes = [n for n in nodes_list if os.path.basename(n.get("source_file", "")) in selected_topics]
-        
-        # Apply name/content search if specified
-        if search_q:
-            filtered_nodes = [n for n in filtered_nodes if search_q.lower() in n.get("title", "").lower() or search_q.lower() in n.get("content", "").lower()]
-            
-        filtered_ids = {n["id"] for n in filtered_nodes}
-        filtered_edges = [e for e in edges_list if e["source"] in filtered_ids and e["target"] in filtered_ids]
-        
-        st.markdown(f"**Unified View**: displaying **{len(filtered_nodes)}** nodes and **{len(filtered_edges)}** edges.")
-        if filtered_nodes:
-            html = generate_vis_html(filtered_nodes, filtered_edges, "network_unified", height=450)
-            components.html(html, height=470)
-        else:
-            st.warning("No nodes match the selected filters.")
-            
+    search_q = st.text_input("🔍 Search concepts by title or text snippet:", "")
+
+    # Map layout mode string to option code
+    layout_type_map = {
+        "Hierarchical Tree (Top-Down)": "dag_ud",
+        "Hierarchical Tree (Left-Right)": "dag_lr",
+        "Force-Directed Cluster": "force_cluster"
+    }
+    layout_code = layout_type_map[layout_mode]
+
+    # Filter nodes by document and depth level
+    filtered_nodes = [n for n in nodes_list if os.path.basename(n.get("source_file", "")) in selected_topics]
+
+    if depth_filter == "Root & Main Concepts (Level 0 & H1)":
+        filtered_nodes = [n for n in filtered_nodes if n.get("level", 1) <= 1]
+    elif depth_filter == "Sections & Subsections (Level 0, H1 & H2)":
+        filtered_nodes = [n for n in filtered_nodes if n.get("level", 1) <= 2]
+
+    # Apply title/content search filter
+    if search_q.strip():
+        q_clean = search_q.strip().lower()
+        filtered_nodes = [n for n in filtered_nodes if q_clean in n.get("title", "").lower() or q_clean in n.get("content", "").lower()]
+
+    filtered_ids = {n["id"] for n in filtered_nodes}
+    filtered_edges = [e for e in edges_list if e["source"] in filtered_ids and e["target"] in filtered_ids]
+
+    st.markdown(f"**Rendered Topology**: **{len(filtered_nodes)}** concepts & **{len(filtered_edges)}** relations.")
+
+    if filtered_nodes:
+        html = generate_vis_html(filtered_nodes, filtered_edges, layout_type=layout_code, container_id="network_main", height=490)
+        components.html(html, height=510)
     else:
-        # Render side-by-side columns
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("##### Topic Graph A (Left)")
-            left_topic = st.selectbox("Select Left Topic:", unique_files, index=0)
-            
-            # Filter Left Topic
-            left_nodes = [n for n in nodes_list if os.path.basename(n.get("source_file", "")) == left_topic]
-            if search_q:
-                left_nodes = [n for n in left_nodes if search_q.lower() in n.get("title", "").lower() or search_q.lower() in n.get("content", "").lower()]
-            left_ids = {n["id"] for n in left_nodes}
-            left_edges = [e for e in edges_list if e["source"] in left_ids and e["target"] in left_ids]
-            
-            st.markdown(f"Showing **{len(left_nodes)}** nodes and **{len(left_edges)}** edges.")
-            if left_nodes:
-                html_left = generate_vis_html(left_nodes, left_edges, "network_left", height=380)
-                components.html(html_left, height=400)
-            else:
-                st.warning("No left nodes matched.")
-                
-        with col2:
-            st.markdown("##### Topic Graph B (Right)")
-            # Default to second file if multiple exist
-            right_idx = min(1, len(unique_files) - 1)
-            right_topic = st.selectbox("Select Right Topic:", unique_files, index=right_idx)
-            
-            # Filter Right Topic
-            right_nodes = [n for n in nodes_list if os.path.basename(n.get("source_file", "")) == right_topic]
-            if search_q:
-                right_nodes = [n for n in right_nodes if search_q.lower() in n.get("title", "").lower() or search_q.lower() in n.get("content", "").lower()]
-            right_ids = {n["id"] for n in right_nodes}
-            right_edges = [e for e in edges_list if e["source"] in right_ids and e["target"] in right_ids]
-            
-            st.markdown(f"Showing **{len(right_nodes)}** nodes and **{len(right_edges)}** edges.")
-            if right_nodes:
-                html_right = generate_vis_html(right_nodes, right_edges, "network_right", height=380)
-                components.html(html_right, height=400)
-            else:
-                st.warning("No right nodes matched.")
+        st.warning("No concepts match the selected topic and depth filters.")
 
     st.markdown("---")
+
+    # Interactive Concept Inspector Card
+    st.markdown("#### 🔬 Concept Inspector & Detail Viewer")
+    if filtered_nodes:
+        concept_titles = [f"{n['title']} (Level {n.get('level', 1)})" for n in filtered_nodes]
+        selected_idx = st.selectbox("Select a concept to inspect details:", range(len(filtered_nodes)), format_func=lambda i: concept_titles[i])
+        
+        target_node = filtered_nodes[selected_idx]
+        
+        ic1, ic2 = st.columns([1, 2])
+        with ic1:
+            st.markdown(f"**Concept Title:** `{target_node.get('title')}`")
+            st.markdown(f"**Heading Level:** `Level {target_node.get('level')}`")
+            st.markdown(f"**Source Document:** `{os.path.basename(target_node.get('source_file', ''))}`")
+            st.markdown(f"**Node ID:** `{target_node.get('id')}`")
+        with ic2:
+            st.markdown("**Associated Markdown Content:**")
+            content_text = target_node.get("content", "").strip()
+            if content_text:
+                st.info(content_text)
+            else:
+                st.caption("No direct text body attached to this heading node.")
 
     # 2. Tabular Concepts Data
-    st.markdown("#### Tabular Concept Inventory")
-    graph_rows = []
-    for concept in nodes_list:
-        title = concept.get("title", "")
-        content = concept.get("content", "")
-        if not search_q or search_q.lower() in title.lower() or search_q.lower() in content.lower():
-            graph_rows.append({
-                "Concept ID": concept.get("id", ""),
-                "Title": title,
-                "Heading Level": concept.get("level", ""),
-                "Source File": os.path.basename(concept.get("source_file", "")) if concept.get("source_file") else "",
-                "Associated Content": content[:300] + "..." if content else ""
-            })
-            
-    st.dataframe(pd.DataFrame(graph_rows), use_container_width=True)
+    st.markdown("---")
+    with st.expander("Show Tabular Concept Inventory", expanded=False):
+        graph_rows = []
+        for concept in nodes_list:
+            title = concept.get("title", "")
+            content = concept.get("content", "")
+            if not search_q or search_q.lower() in title.lower() or search_q.lower() in content.lower():
+                graph_rows.append({
+                    "Concept ID": concept.get("id", ""),
+                    "Title": title,
+                    "Heading Level": concept.get("level", ""),
+                    "Source File": os.path.basename(concept.get("source_file", "")) if concept.get("source_file") else "",
+                    "Associated Content": content[:200] + "..." if content else ""
+                })
+                
+        st.dataframe(pd.DataFrame(graph_rows), use_container_width=True)
+

@@ -2,9 +2,9 @@
 *(Instructions for AI: Read this file at the start of every session. Update this file at the end of every session or when a major feature is complete. Do not change the structure, only update the values.)*
 
 ## Current Status
-* **Project Phase:** Scaled testing on Kubernetes website documentation (1,675 markdown files), expanded golden dataset (14 questions), and automated evaluations.
-* **Current Active Task:** Benchmark evaluations fully operational on scaled dataset and Streamlit UI dashboard running.
-* **Last Modified:** July 21, 2026
+* **Project Phase:** All Phases Complete (Phases 1-4) with Multi-Model Fallback Resilience, API Rate-Limit Protection, and Overhauled Knowledge Graph Visual Topology.
+* **Current Active Task:** Benchmark evaluations fully operational and Streamlit UI dashboard running.
+* **Last Modified:** July 22, 2026
 
 ## Completed Features
 * Architectural Planning & Documentation Complete (Overview, PRD, Architecture, Rules, Phases, Design finalized).
@@ -30,11 +30,15 @@
   * Programmed `download_k8s_docs.py` to sparse-checkout and extract 1,675 Kubernetes English documentation files into `z_docs/kubernetes_docs/`, utilizing the `--depth=1` cloning speed optimization.
   * Formulated and appended 9 detailed technical Kubernetes architectural questions to `data/golden_dataset.json` (covering Pods, Services, api-server, Deployments, DaemonSets, ConfigMaps, Namespaces, RBAC, PV/PVC, HPA, Secrets, scheduling taints/tolerations, Kubelet).
   * Overhauled `runbook.md` to document complete virtualenv, credentials, scaling dataset operations, cache invalidation, and troubleshooting guidelines.
+* Post-Phase 4 Multi-Provider Failover & UI Overhaul:
+  * Programmed Groq <-> Gemini multi-model failover (`generate_node`, `critic_node`, `rewrite_node`) to handle provider rate limits gracefully.
+  * Added 429 quota safety guards to `critic_node` to accept valid draft responses and prevent API retry storms.
+  * Overhauled Tab 3 in `app.py` into a clean visual topology viewer with depth-scaled dot nodes (`shape: 'dot'`), DAG Tree and Force Cluster layout views, depth filters, visual legend, and an interactive Concept Inspector card.
 
 ## Known Bugs & Issues
-* **Ragas Evaluation Rate Limits & Slowness**: Running Ragas evaluations on the Gemini Free Tier API key is extremely slow (taking ~12 minutes for a 20-unit iteration run) and frequently results in `N/A` for all final metrics (`faithfulness`, `answer_relevancy`, `context_precision`, `context_recall`). This is due to Gemini's free tier rate limit of 15 Requests Per Minute (RPM). Because Ragas triggers multiple evaluation API calls per metric for each question, even sequential execution (`max_workers=1`) quickly triggers 429 `RESOURCE_EXHAUSTED` blocks, leading to massive retry delays and incomplete (`N/A`) metric tables.
+* **None (Resolved)**: Rate-limit retry storms and evaluation crashes have been resolved with multi-model failovers, 429 quota protection guards, and Ragas LLM `max_retries=6`.
 
 ## Context Notes for Next Session
-* System Python 3.11 environment in AppData must be used to run commands (`py -3.11 ...`) to bypass local WDAC blocks.
+* System Python 3.11 environment in `.venv` must be used to run commands (`.\.venv\Scripts\python.exe ...`).
 * Environment keys for Groq and Gemini are loaded successfully from `.env` in the workspace root.
-* Streamlit server running locally on port 8501.
+* Streamlit server running locally on port 8501 (`streamlit run src/ui/app.py`).

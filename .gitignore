@@ -8,3 +8,4 @@ __pycache__/
 .gemini/
 z_docs/kubernetes_docs/
 temp_k8s_clone/
+data/processed/

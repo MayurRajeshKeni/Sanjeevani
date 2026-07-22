@@ -1,6 +1,10 @@
+import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
 from langgraph.graph import StateGraph, END
-from .state import RagAgentState
-from .graph import should_continue
+from src.agent.state import RagAgentState
+from src.agent.graph import should_continue
 
 # Mock Nodes to trace routing paths without hitting live LLMs
 def mock_retrieve(state: RagAgentState):
