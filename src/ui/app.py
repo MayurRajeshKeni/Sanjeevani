@@ -540,14 +540,15 @@ with tab_graph:
             title_clean = n["title"]
             short_label = title_clean if len(title_clean) <= 22 else title_clean[:20] + "..."
             
-            snippet = n.get("content", "")[:250].replace('"', "'").replace('\n', ' ')
-            if len(n.get("content", "")) > 250:
-                snippet += "..."
+            raw_text = n.get("content", "").replace('"', "'").replace('\n', ' ').strip()
+            snippet = raw_text[:117] + "..." if len(raw_text) > 120 else raw_text
+            if not snippet:
+                snippet = "Heading node."
                 
             vis_nodes.append({
                 "id": n["id"],
                 "label": short_label,
-                "title": f"<div style='padding:4px;'><b>{title_clean}</b><br/><span style='color:#94A3B8; font-size:10px;'>Level {level} &bull; {os.path.basename(n.get('source_file', ''))}</span><br/><br/>{snippet}</div>",
+                "title": f"<div style='max-width:240px; word-wrap:break-word; word-break:break-word; white-space:normal;'><b style='font-size:12px; color:#F8FAFC;'>{title_clean}</b><br/><span style='color:#00F0FF; font-size:10px; font-weight:600;'>Level {level} &bull; {os.path.basename(n.get('source_file', ''))}</span><br/><div style='margin-top:6px; color:#94A3B8; font-size:11px; line-height:1.3;'>{snippet}</div></div>",
                 "level": level,
                 "shape": "dot",
                 "size": shape_size,
@@ -637,12 +638,17 @@ with tab_graph:
               background-color: #1E293B !important;
               color: #F8FAFC !important;
               border: 1px solid #475569 !important;
-              border-radius: 6px !important;
-              font-family: 'Inter', sans-serif !important;
-              padding: 10px !important;
+              border-radius: 8px !important;
+              font-family: 'Inter', system-ui, sans-serif !important;
+              padding: 10px 14px !important;
               font-size: 11px !important;
-              max-width: 300px !important;
-              box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+              line-height: 1.4 !important;
+              max-width: 260px !important;
+              word-wrap: break-word !important;
+              word-break: break-word !important;
+              overflow-wrap: anywhere !important;
+              white-space: normal !important;
+              box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
             }}
           </style>
         </head>
