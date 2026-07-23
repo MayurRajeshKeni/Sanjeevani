@@ -200,27 +200,35 @@ class AgentNodes:
         
         if self.genai_client:
             for model_name in self.gemini_models:
-                max_retries = 2
-                for attempt in range(max_retries):
-                    try:
-                        response = self.genai_client.models.generate_content(
-                            model=model_name,
-                            contents=prompt
-                        )
-                        if response.text and response.text.strip():
-                            raw_content = response.text.strip()
-                            break
-                    except Exception as e:
-                        err_str = str(e).lower()
-                        print(f"[Node: Critic] Model {model_name} attempt {attempt+1} error: {e}")
-                        if "429" in err_str or "resource_exhausted" in err_str or "quota" in err_str:
-                            is_rate_limited = True
-                            time.sleep(3 * (attempt + 1))
-                if raw_content:
-                    break
+                try:
+                    response = self.genai_client.models.generate_content(
+                        model=model_name,
+                        contents=prompt
+                    )
+                    if response.text and response.text.strip():
+                        raw_content = response.text.strip()
+                        break
+                except Exception as e:
+                    err_str = str(e).lower()
+                    print(f"[Node: Critic] Model {model_name} error: {e}")
+                    if "429" in err_str or "resource_exhausted" in err_str or "quota" in err_str:
+                        is_rate_limited = True
+                        break # Break model attempt loop immediately on quota error to use Groq fallback
+
+        # Fallback to Groq if Gemini is rate limited or unavailable
+        if not raw_content and self.generator_llm:
+            try:
+                print("[Node: Critic] Querying Groq for critique evaluation...")
+                res = self.generator_llm.invoke([
+                    SystemMessage(content="You are an objective Critic and Hallucination Detector for a RAG pipeline. Return ONLY raw valid JSON with keys 'score' (float 0.0-1.0) and 'feedback' (string). Do not wrap in markdown."),
+                    HumanMessage(content=prompt)
+                ])
+                if res.content and res.content.strip():
+                    raw_content = res.content.strip()
+            except Exception as e:
+                print(f"[Node: Critic] Groq critique fallback error: {e}")
                     
-        # Safety Guard: If Critic API is rate limited, DO NOT set score=0.0 (which triggers an API retry storm!).
-        # Accept the draft answer with score=1.0 and a descriptive feedback note.
+        # Safety Guard: If both Critic APIs fail, accept draft answer to prevent retry storm
         if not raw_content:
             if is_rate_limited:
                 print("[Node: Critic] Rate limit hit on Critic API. Accepting draft answer to prevent retry storm.")

@@ -133,9 +133,13 @@ def run_evaluations() -> None:
         "ground_truth": ground_truths
     })
     
-    # 6. Initialize Ragas evaluation models using Gemini 2.0 Flash with max_retries to handle rate limits
+    # 6. Initialize Ragas evaluation models using Groq Llama 3.1 8B Instant (500k TPD quota, fast evaluation)
     print("\nInitializing Ragas evaluation models...")
-    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.0, max_retries=6)
+    if os.getenv("GROQ_API_KEY"):
+        llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0.0, max_retries=6)
+    else:
+        llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.0, max_retries=6)
+        
     embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2", model_kwargs={"local_files_only": True})
     
     # Explicitly map models onto metrics to bypass default OpenAI lookups
