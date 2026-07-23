@@ -37,7 +37,12 @@
   * Overhauled Tab 3 in `app.py` into a clean visual topology viewer with depth-scaled dot nodes (`shape: 'dot'`), DAG Tree and Force Cluster layout views, depth filters, visual legend, and an interactive Concept Inspector card.
 
 ## Known Bugs & Issues
-* **None (Resolved)**: Rate-limit retry storms and evaluation crashes have been resolved with multi-model failovers, 429 quota protection guards, and Ragas LLM `max_retries=6`.
+* **Resolved Knowledge Graph Topology Bugs (Tab 3)**:
+  1. *No Max/Min Zoom Boundaries*: Fixed by implementing Vis.js zoom event listeners with bounds enforced between `0.4x` and `2.5x`.
+  2. *Top-Down & Left-Right Layout Mismatch*: Fixed by dynamically assigning `forceDirection: 'horizontal'` for Left-Right layout (`dag_lr`) and `forceDirection: 'vertical'` for Top-Down layout (`dag_ud`).
+  3. *Invisible Edge Arrow Marks*: Fixed by setting explicit `arrows: { to: { enabled: true, scaleFactor: 0.9 } }` and adjusting edge stroke colors to `#64748B`.
+  4. *Blank Canvas on "All Levels" View with Blank Search*: Fixed by defaulting source document selection to main project docs and implementing a safety guard capping max rendered nodes at `250` (with interactive user notification) to prevent DOM/Vis.js memory crashes on 15,000+ scaled nodes.
+* **Resolved Rate-Limit & Evaluation Bugs**: Rate-limit retry storms and evaluation crashes resolved with Groq/Gemini multi-model failover, 429 quota protection guards, and Ragas `llama-3.1-8b-instant` 500k TPD evaluation.
 
 ## Context Notes for Next Session
 * System Python 3.11 environment in `.venv` must be used to run commands (`.\.venv\Scripts\python.exe ...`).

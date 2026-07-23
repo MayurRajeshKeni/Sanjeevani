@@ -559,14 +559,18 @@ with tab_graph:
                 "font": { "color": '#F8FAFC', "face": 'Inter, sans-serif', "size": 11, "vadjust": 2 }
             })
             
+        is_lr = (layout_type == "dag_lr")
+        edge_force_dir = "horizontal" if is_lr else "vertical"
+
         vis_edges = []
         for e in edges:
             vis_edges.append({
                 "from": e["source"],
                 "to": e["target"],
-                "color": { "color": '#334155', "highlight": '#00F0FF' },
-                "arrows": { "to": { "enabled": True, "scaleFactor": 0.5 } },
-                "smooth": { "type": "cubicBezier", "forceDirection": "vertical", "roundness": 0.4 }
+                "arrows": { "to": { "enabled": True, "scaleFactor": 0.9, "type": "arrow" } },
+                "color": { "color": '#64748B', "highlight": '#00F0FF' },
+                "width": 1.5,
+                "smooth": { "type": "cubicBezier", "forceDirection": edge_force_dir, "roundness": 0.4 }
             })
             
         nodes_json = json.dumps(vis_nodes)
@@ -580,9 +584,9 @@ with tab_graph:
                   enabled: true,
                   direction: 'UD',
                   sortMethod: 'directed',
-                  levelSeparation: 90,
-                  nodeSpacing: 140,
-                  treeSpacing: 160
+                  levelSeparation: 100,
+                  nodeSpacing: 160,
+                  treeSpacing: 180
                 }
               },
               physics: { enabled: false }
@@ -594,9 +598,9 @@ with tab_graph:
                   enabled: true,
                   direction: 'LR',
                   sortMethod: 'directed',
-                  levelSeparation: 140,
-                  nodeSpacing: 60,
-                  treeSpacing: 100
+                  levelSeparation: 180,
+                  nodeSpacing: 50,
+                  treeSpacing: 120
                 }
               },
               physics: { enabled: false }
@@ -654,6 +658,11 @@ with tab_graph:
                 borderWidth: 1.5,
                 shadow: true
               }},
+              edges: {{
+                arrows: {{ to: {{ enabled: true, scaleFactor: 0.9 }} }},
+                color: {{ color: '#64748B', highlight: '#00F0FF' }},
+                width: 1.5
+              }},
               interaction: {{
                 hover: true,
                 tooltipDelay: 100,
@@ -663,6 +672,17 @@ with tab_graph:
               {layout_config}
             }};
             var network = new vis.Network(container, data, options);
+            
+            // Enforce Min/Max Zoom boundaries (MIN: 0.4x, MAX: 2.5x)
+            var MIN_ZOOM = 0.4;
+            var MAX_ZOOM = 2.5;
+            network.on("zoom", function(params) {{
+              if (params.scale < MIN_ZOOM) {{
+                network.moveTo({{ scale: MIN_ZOOM }});
+              }} else if (params.scale > MAX_ZOOM) {{
+                network.moveTo({{ scale: MAX_ZOOM }});
+              }}
+            }});
             
             network.once("stabilizationIterationsDone", function() {{
               network.setOptions({{ physics: false }});
@@ -682,6 +702,12 @@ with tab_graph:
     </div>
     """, unsafe_allow_html=True)
 
+    # Main project docs default selection
+    main_docs = ['architecture.md', 'design_ui.md', 'memory.md', 'phases.md', 'prd.md', 'rules.md', 'runbook.md']
+    default_topics = [f for f in unique_files if f in main_docs]
+    if not default_topics:
+        default_topics = unique_files[:10]
+
     # Controls Panel
     c1, c2, c3 = st.columns([1.2, 1.2, 1.6])
     with c1:
@@ -700,7 +726,7 @@ with tab_graph:
         selected_topics = st.multiselect(
             "Filter Source Documents:",
             unique_files,
-            default=unique_files
+            default=default_topics
         )
 
     search_q = st.text_input("🔍 Search concepts by title or text snippet:", "")
@@ -725,6 +751,12 @@ with tab_graph:
     if search_q.strip():
         q_clean = search_q.strip().lower()
         filtered_nodes = [n for n in filtered_nodes if q_clean in n.get("title", "").lower() or q_clean in n.get("content", "").lower()]
+
+    # Safety Guard: Cap max rendered nodes at 250 to prevent Vis.js memory crash when viewing all files
+    total_matching_nodes = len(filtered_nodes)
+    if total_matching_nodes > 250:
+        filtered_nodes = filtered_nodes[:250]
+        st.info(f"ℹ️ Showing top **250** concepts (out of {total_matching_nodes:,} total). Select specific source documents or enter a search keyword to view targeted subgraphs.")
 
     filtered_ids = {n["id"] for n in filtered_nodes}
     filtered_edges = [e for e in edges_list if e["source"] in filtered_ids and e["target"] in filtered_ids]
