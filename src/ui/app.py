@@ -649,7 +649,15 @@ with tab_graph:
         <body>
           <div id="{container_id}"></div>
           <script type="text/javascript">
-            var nodes = new vis.DataSet({nodes_json});
+            var raw_nodes = {nodes_json};
+            raw_nodes.forEach(function(n) {
+              if (n.title) {
+                var el = document.createElement('div');
+                el.innerHTML = n.title;
+                n.title = el;
+              }
+            });
+            var nodes = new vis.DataSet(raw_nodes);
             var edges = new vis.DataSet({edges_json});
             var container = document.getElementById('{container_id}');
             var data = {{ nodes: nodes, edges: edges }};
