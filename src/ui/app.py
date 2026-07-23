@@ -650,13 +650,13 @@ with tab_graph:
           <div id="{container_id}"></div>
           <script type="text/javascript">
             var raw_nodes = {nodes_json};
-            raw_nodes.forEach(function(n) {
-              if (n.title) {
+            raw_nodes.forEach(function(n) {{
+              if (n.title) {{
                 var el = document.createElement('div');
                 el.innerHTML = n.title;
                 n.title = el;
-              }
-            });
+              }}
+            }});
             var nodes = new vis.DataSet(raw_nodes);
             var edges = new vis.DataSet({edges_json});
             var container = document.getElementById('{container_id}');
