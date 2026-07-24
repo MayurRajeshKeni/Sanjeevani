@@ -628,17 +628,58 @@ with tab_graph:
               }
             """
         
+        # Dynamically calculate inner canvas size to trigger vertical & horizontal scrollbars
+        node_count = len(nodes)
+        if layout_type == "dag_lr":
+            inner_width = max(1800, node_count * 25)
+            inner_height = max(1000, node_count * 12)
+        elif layout_type == "dag_ud":
+            inner_width = max(1600, node_count * 20)
+            inner_height = max(1200, node_count * 18)
+        else: # force_cluster
+            inner_width = max(1500, node_count * 18)
+            inner_height = max(1000, node_count * 14)
+
         return f"""
         <html>
         <head>
           <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
           <style type="text/css">
-            #{container_id} {{
+            body {{
+              margin: 0;
+              padding: 0;
+              background-color: #0E1117;
+            }}
+            .graph-scroll-wrapper {{
               width: 100%;
               height: {height}px;
+              overflow: auto;
               background-color: #0E1117;
               border: 1px solid #1E293B;
               border-radius: 8px;
+              box-sizing: border-box;
+            }}
+            /* Custom sleek neon dark scrollbars */
+            .graph-scroll-wrapper::-webkit-scrollbar {{
+              width: 10px;
+              height: 10px;
+            }}
+            .graph-scroll-wrapper::-webkit-scrollbar-track {{
+              background: #0E1117;
+              border-radius: 4px;
+            }}
+            .graph-scroll-wrapper::-webkit-scrollbar-thumb {{
+              background: #334155;
+              border-radius: 4px;
+              border: 2px solid #0E1117;
+            }}
+            .graph-scroll-wrapper::-webkit-scrollbar-thumb:hover {{
+              background: #00F0FF;
+            }}
+            #{container_id} {{
+              width: {inner_width}px;
+              height: {inner_height}px;
+              background-color: #0E1117;
             }}
             div.vis-tooltip {{
               background-color: #1E293B !important;
@@ -659,7 +700,9 @@ with tab_graph:
           </style>
         </head>
         <body>
-          <div id="{container_id}"></div>
+          <div class="graph-scroll-wrapper">
+            <div id="{container_id}"></div>
+          </div>
           <script type="text/javascript">
             var raw_nodes = {nodes_json};
             raw_nodes.forEach(function(n) {{
