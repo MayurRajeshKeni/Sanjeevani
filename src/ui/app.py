@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import time
+import math
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
@@ -403,11 +404,12 @@ with tab_bench:
         
         # Helper to format metrics safely (mapping None/NaN to '0.00')
         def fmt_val(v):
-            if v is None:
+            if v is None or pd.isna(v):
                 return "0.00"
-            if isinstance(v, float) and math.isnan(v):
+            try:
+                return f"{float(v):.2f}"
+            except (ValueError, TypeError):
                 return "0.00"
-            return f"{v:.2f}"
             
         f_val = fmt_val(summary.get('faithfulness'))
         ar_val = fmt_val(summary.get('answer_relevancy'))
