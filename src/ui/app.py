@@ -401,9 +401,13 @@ with tab_bench:
         summary = eval_data.get("summary", {})
         details = eval_data.get("details", [])
         
-        # Helper to format metrics safely (mapping None to 'N/A')
+        # Helper to format metrics safely (mapping None/NaN to '0.00')
         def fmt_val(v):
-            return f"{v:.2f}" if v is not None else "N/A"
+            if v is None:
+                return "0.00"
+            if isinstance(v, float) and math.isnan(v):
+                return "0.00"
+            return f"{v:.2f}"
             
         f_val = fmt_val(summary.get('faithfulness'))
         ar_val = fmt_val(summary.get('answer_relevancy'))
@@ -577,17 +581,17 @@ with tab_graph:
         nodes_json = json.dumps(vis_nodes)
         edges_json = json.dumps(vis_edges)
         
-        # Configure layout options
+        # Configure layout options using hubsize sorting to prevent cyclic DAG crashes
         if layout_type == "dag_ud":
             layout_config = """
               layout: {
                 hierarchical: {
                   enabled: true,
                   direction: 'UD',
-                  sortMethod: 'directed',
-                  levelSeparation: 100,
-                  nodeSpacing: 160,
-                  treeSpacing: 180
+                  sortMethod: 'hubsize',
+                  levelSeparation: 90,
+                  nodeSpacing: 140,
+                  treeSpacing: 160
                 }
               },
               physics: { enabled: false }
@@ -598,10 +602,10 @@ with tab_graph:
                 hierarchical: {
                   enabled: true,
                   direction: 'LR',
-                  sortMethod: 'directed',
-                  levelSeparation: 180,
-                  nodeSpacing: 50,
-                  treeSpacing: 120
+                  sortMethod: 'hubsize',
+                  levelSeparation: 150,
+                  nodeSpacing: 45,
+                  treeSpacing: 110
                 }
               },
               physics: { enabled: false }
@@ -611,14 +615,14 @@ with tab_graph:
               physics: {
                 enabled: true,
                 barnesHut: {
-                  gravitationalConstant: -2500,
+                  gravitationalConstant: -2000,
                   centralGravity: 0.2,
-                  springLength: 100,
+                  springLength: 90,
                   springConstant: 0.04,
                   damping: 0.09,
                   avoidOverlap: 0.8
                 },
-                stabilization: { enabled: true, iterations: 120 }
+                stabilization: { enabled: true, iterations: 100 }
               }
             """
         
@@ -687,8 +691,8 @@ with tab_graph:
             }};
             var network = new vis.Network(container, data, options);
             
-            // Enforce Min/Max Zoom boundaries (MIN: 0.4x, MAX: 2.5x)
-            var MIN_ZOOM = 0.4;
+            // Enforce Min/Max Zoom boundaries (MIN: 0.3x, MAX: 2.5x)
+            var MIN_ZOOM = 0.3;
             var MAX_ZOOM = 2.5;
             network.on("zoom", function(params) {{
               if (params.scale < MIN_ZOOM) {{
@@ -698,9 +702,13 @@ with tab_graph:
               }}
             }});
             
+            // Auto-fit network viewport when initialized or stabilized
             network.once("stabilizationIterationsDone", function() {{
-              network.setOptions({{ physics: false }});
+              network.fit();
             }});
+            setTimeout(function() {{
+              network.fit();
+            }}, 250);
           </script>
         </body>
         </html>
@@ -766,11 +774,11 @@ with tab_graph:
         q_clean = search_q.strip().lower()
         filtered_nodes = [n for n in filtered_nodes if q_clean in n.get("title", "").lower() or q_clean in n.get("content", "").lower()]
 
-    # Safety Guard: Cap max rendered nodes at 250 to prevent Vis.js memory crash when viewing all files
+    # Safety Guard: Cap max rendered nodes at 120 for 100% stable rendering speed
     total_matching_nodes = len(filtered_nodes)
-    if total_matching_nodes > 250:
-        filtered_nodes = filtered_nodes[:250]
-        st.info(f"ℹ️ Showing top **250** concepts (out of {total_matching_nodes:,} total). Select specific source documents or enter a search keyword to view targeted subgraphs.")
+    if total_matching_nodes > 120:
+        filtered_nodes = filtered_nodes[:120]
+        st.info(f"ℹ️ Displaying top **120** concepts (out of {total_matching_nodes:,} total). Select specific source documents or enter a search keyword to view targeted subgraphs.")
 
     filtered_ids = {n["id"] for n in filtered_nodes}
     filtered_edges = [e for e in edges_list if e["source"] in filtered_ids and e["target"] in filtered_ids]
@@ -784,6 +792,18 @@ with tab_graph:
         st.warning("No concepts match the selected topic and depth filters.")
 
     st.markdown("---")
+
+    # Helper function to clean broken relative markdown links in content view
+    def clean_markdown_links(text):
+        if not text:
+            return ""
+        def replace_link(match):
+            label = match.group(1)
+            url = match.group(2)
+            if url.startswith("http://") or url.startswith("https://"):
+                return f"[{label}]({url})"
+            return f"**{label}**"
+        return re.sub(r'\[([^\]]+)\]\(([^)]+)\)', replace_link, text)
 
     # Interactive Concept Inspector Card
     st.markdown("#### 🔬 Concept Inspector & Detail Viewer")
@@ -803,7 +823,7 @@ with tab_graph:
             st.markdown("**Associated Markdown Content:**")
             content_text = target_node.get("content", "").strip()
             if content_text:
-                st.info(content_text)
+                st.info(clean_markdown_links(content_text))
             else:
                 st.caption("No direct text body attached to this heading node.")
 

@@ -186,13 +186,12 @@ def run_evaluations() -> None:
     }
     df = df.rename(columns=column_mapping)
     
-    # Calculate summary scores before converting NaNs to None
+    # Calculate summary scores before converting NaNs
     summary_scores = df.mean(numeric_only=True).to_dict()
-    summary_scores = {k: (None if pd.isna(v) else float(v)) for k, v in summary_scores.items()}
+    summary_scores = {k: (0.0 if pd.isna(v) else float(v)) for k, v in summary_scores.items()}
     
-    # Replace NaN in details dataframe with None for valid JSON serialization
-    import numpy as np
-    df = df.replace({np.nan: None})
+    # Replace NaN in details dataframe with 0.0 for clean numerical presentation
+    df = df.fillna(0.0)
     details_list = df.to_dict(orient="records")
     
     eval_output = {
